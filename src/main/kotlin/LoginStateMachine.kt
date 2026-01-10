@@ -7,9 +7,9 @@ sealed class AppStates {
     object Uninitialized : AppStates()
     object RequestEula : AppStates()
     object ExitApp : AppStates()
-    sealed class RequestLogin : AppStates() {
-        class Uninitialized : RequestLogin()
-        class LoginFailed(reason: LoginFailureReason) : RequestLogin()
+    sealed class Login : AppStates() {
+        object RequestInput : Login()
+        class Failed(val reason: LoginFailureReason) : Login()
     }
     object GoToMain : AppStates()
 }
@@ -30,18 +30,18 @@ sealed class AppEvents {
 val appStartStateMachine = stateMachine {
 
     state<Uninitialized> {
-        on<EulaOutOfDate>() transitionTo { AppStates.RequestEula() }
-        on<EulaAccepted>() transitionTo { RequestLogin() }
+        on<EulaOutOfDate>() transitionTo RequestEula
+        on<EulaAccepted>() transitionTo Login.RequestInput
     }
 
     state<RequestEula> {
-        on<EulaAccepted>() transitionTo { RequestLogin.Uninitialized }
-        on<EulaDenied>() transitionTo { ExitApp }
+        on<EulaAccepted>() transitionTo Login.RequestInput
+        on<EulaDenied>() transitionTo ExitApp
     }
 
-    state<RequestLogin> {
-        on<LoginSuccess>() transitionTo { GoToMain }
-        on<LoginFailed>() transitionTo { event -> RequestLogin.LoginFailed(event.reason) }
+    state<Login> {
+        on<LoginSuccess>() transitionTo GoToMain
+        on<LoginFailed>() transitionWith { _, event -> Login.Failed(event.reason) }
     }
 
 }

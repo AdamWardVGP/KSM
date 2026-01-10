@@ -49,11 +49,17 @@ class StateMachine<State: Any, Event: Any>(
     init {
         scope.launch {
             for (event in events) {
-                val stateClass = _currentState.value::class
+                val state = _currentState.value
                 val eventClass = event::class
 
                 val transition =
-                    transitions[stateClass]?.get(eventClass) ?: continue
+                    transitions.entries
+                        .firstOrNull { (stateKClass, _) ->
+                            stateKClass.isInstance(state)
+                        }
+                        ?.value
+                        ?.get(eventClass)
+                        ?: continue
 
                 val newState = transition.reduce(_currentState.value, event)
                 _currentState.value = newState
@@ -100,8 +106,8 @@ class StateMachineBuilder<State: Any, Event: Any> {
     val transitions = mutableMapOf<KClass<out State>, Map<KClass<out Event>, Transition<State, Event>>>()
 
 
-    inline fun <reified STATE: State> state(block: StateTransitionBuilder<STATE, Event>.() -> Unit) {
-        StateTransitionBuilder<STATE, Event>(STATE::class).apply(block).also { builder ->
+    inline fun <reified STATE: State> state(block: StateTransitionBuilder<STATE, State, Event>.() -> Unit) {
+        StateTransitionBuilder<STATE, State, Event>(STATE::class).apply(block).also { builder ->
 
             require(STATE::class !in transitions) {
                 "State ${STATE::class.simpleName} already defined"
@@ -112,7 +118,7 @@ class StateMachineBuilder<State: Any, Event: Any> {
         }
     }
 
-     class StateTransitionBuilder<State : Any, Event : Any>(private val from: KClass<State>) {
+     class StateTransitionBuilder<FromState : State, State : Any, Event : Any>(private val from: KClass<FromState>) {
 
         val transitions = mutableMapOf<KClass<out Event>, Transition<State, Event>>()
 
@@ -121,12 +127,21 @@ class StateMachineBuilder<State: Any, Event: Any> {
 
         inner class TransitionBuilder<EVENT: Event>(private val event: KClass<EVENT>) {
 
-            infix fun transitionTo(target: (State, EVENT) -> State) {
+            infix fun transitionWith(target: (State, EVENT) -> State) {
                 transitions[event] = Transition(
                     id = TransitionId(from, event),
                     from = from,
                     event = event,
                     reduce = { state, evt -> target(state, evt as EVENT) }
+                )
+            }
+
+            infix fun transitionTo(target: State) {
+                transitions[event] = Transition(
+                    id = TransitionId(from, event),
+                    from = from,
+                    event = event,
+                    reduce = { _, _ -> target }
                 )
             }
         }
