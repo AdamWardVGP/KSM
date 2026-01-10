@@ -1,6 +1,6 @@
-# KSM
+# ✂️ Klipper
 
-A finite state machine for Kotlin Multiplatform
+Cut through spaghetti state logic with a finite state machine for Kotlin Multiplatform
 
 [![Maven Central](https://img.shields.io/maven-central/v/dev.adamwardvgp.ksm/runtime.svg)](https://github.com/AdamWardVGP/KSM/releases)
 [![Build Status](https://github.com/AdamWardVGP/ksm/actions/workflows/ci.yml/badge.svg)](https://github.com/AdamWardVGP/ksm/actions/workflows/ci.yml)
@@ -8,14 +8,14 @@ A finite state machine for Kotlin Multiplatform
 
 ---
 
-# What is KSM
+# What is Klipper
 
-KSM is a deterministic, reflection-free finite state machine for defining explicit state graphs.
+Klipper is a deterministic, reflection-free finite state machine for defining explicit state graphs.
 It is designed for application flows where correctness, predictability, and observability matter
 more than convenience abstractions.
 
 This library comes from a repeated pattern: onboarding flows, permission gates, startup logic,
-and other “flowchart-shaped” problems that don’t map cleanly to MVVM, reducers, or a growing ad-hoc list of booleans.
+and other “flowchart-shaped” problems that don’t express cleanly in MVVM, reducers, or with a growing bowl of spaghetti code made up of boolean noodles 🍜.
 KSM treats these problems as what they are — state graphs — and makes them executable.
 
 In particular this state machine offers a few nice features:
@@ -43,7 +43,9 @@ The state machine itself is:
 ```kotlin
 
 val appLaunchStateMachine = stateMachine<AppStates, AppEvents> {
-    initialState = AppStates.Uninitialized
+    
+    initialState = AppStates.Uninitialized //Tell the machine what state to start in
+    dispatchedOn = coroutineScope //Give it a context to collect events and run them
     
     //define the "fromState"
     state<AppStates.Uninitialized> {
@@ -61,17 +63,24 @@ val appLaunchStateMachine = stateMachine<AppStates, AppEvents> {
 }
 ```
 
-Your current state will transition into the next state based on received Events. The state machine itself should not be performing other work internally and functions purely as a mapper `(CurrentState, Event) -> ResultState`. 
+## 3. Monitor the FSM, and listen to events
+
+```kotlin
+//Just collect the flow
+appLaunchStateMachine.currentState.collect { newState-> ... }
+
+//And then dispatch events to the machine to trigger transitions to new states
+appLaunchStateMachine.dispatchEvent(EulaOutOfDate)
+```
+
+## Outcomes and Guidelines
+
+Your current state will transition into the next state based on received Events. 
+
+The state machine itself should not be performing other work internally and functions purely as a mapper `(CurrentState, Event) -> ResultState`.
 
 > ⚠️ I/O, network calls, persistence should be triggered in response to a state transition, and not inside the state machine itself.
 
-To monitor the state simply use flow collection. To send events into the machine just make calls to `dispatchEvent(...)`
-
-```kotlin
-appLaunchStateMachine.currentState.collect { newState-> ... }
-
-appLaunchStateMachine.dispatchEvent(EulaOutOfDate)
-```
 
 # What do you use it for?
 
@@ -102,7 +111,7 @@ The diagrams are generated directly from the compiled state graph, and written t
 
 While you should still test write tests for your state machine this gives a good way to sanity check.
 
-If the diagram is wrong → the code is wrong.
+💡 If the diagram is wrong → the code is wrong.
 
 ## What KSM is not
 
@@ -110,10 +119,9 @@ If the diagram is wrong → the code is wrong.
 - Not a workflow engine
 - Not a side-effect runner
 - Not a persistence layer
-- Not a UI state container
+- Not responsible for rendering UI
 
-KSM is a state graph.  
-It describes *what state follows what*, nothing more.
+🌐 KSM is a state graph. It describes StateB comes after StateA when EventNext happens. nothing more.
 
 # FAQ
 
@@ -128,6 +136,7 @@ Typical problems with `when`-based transitions:
 - It is easy to add a new state without updating all transitions
 - Any state can go to any other state, leading to consistency issues
 - You cannot export or visualize the flow
+- Some poor teammate comes in years later and takes a week to draw his own diagram to debug whats going on.
 - Once 5 states interconnect you create a pentagram and accidentally summon demons into your codebase 😈
 
 KSM solves this by:
@@ -137,3 +146,11 @@ KSM solves this by:
 - Treating the graph itself as a first-class artifact
 
 If your logic can be described as a flowchart, KSM keeps it a flowchart.
+
+
+Mozilla Public License Version 2.0
+==================================
+
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this
+file, You can obtain one at https://mozilla.org/MPL/2.0nah
