@@ -128,15 +128,17 @@ class StateMachineBuilder<State: Any, Event: Any> {
 
         inner class TransitionBuilder<EVENT: Event>(val event: KClass<EVENT>) {
 
-//            inline fun <reified ToState: State>transitionTo(crossinline transform: (State, EVENT) -> State) {
-//                transitions[event] = Transition(
-//                    id = TransitionId(from, event),
-//                    from = from,
-//                    to = ToState::class,
-//                    event = event,
-//                    reduce = { state, evt -> transform(state, evt as EVENT) }
-//                )
-//            }
+            inline fun <reified ToState : State> transitionWith(
+                noinline transform: (State, EVENT) -> State
+            ) {
+                transitions[event] = Transition(
+                    id = TransitionId(from, event),
+                    from = from,
+                    to = ToState::class,
+                    event = event,
+                    reduce = { state, evt -> transform(state, evt as EVENT) }
+                )
+            }
 
             infix fun transitionTo(target: State) {
                 transitions[event] = Transition(

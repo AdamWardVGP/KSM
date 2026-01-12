@@ -21,24 +21,24 @@ fun getAdventureStateMachine(coroutineScope: CoroutineScope): StateMachine<Adven
 
         state<AdventureState.OldBridge> {
             on<AdventureEvent.CrossBridge>() transitionTo AdventureState.Treasure
-//            on<AdventureEvent.RunAway>() transitionTo<AdventureState.GameOver> { _, _ ->
-//                AdventureState.GameOver("You lose your way and starve in the woods.")
-//            }
+            on<AdventureEvent.RunAway>().transitionWith<AdventureState.GameOver> { _, _ ->
+                AdventureState.GameOver("You lose your way and starve in the woods.")
+            }
         }
 
         state<AdventureState.CaveEntrance> {
-//            on<AdventureEvent.EnterCave>() transitionTo<AdventureState.FightMonster::class>() { _, event ->
-//                AdventureState.FightMonster(event.)
-//            }
+            on<AdventureEvent.EnterCave>().transitionWith<AdventureState.FightMonster> { _, event ->
+                AdventureState.FightMonster(event.monsterName)
+            }
 
             on<AdventureEvent.RunAway>() transitionTo AdventureState.DarkForest
         }
 
         state<AdventureState.FightMonster> {
             on<AdventureEvent.Fight>() transitionTo AdventureState.Treasure
-//            on<AdventureEvent.RunAway>() transitionTo {
-//                AdventureState.GameOver("You try to get away but trip and are eaten by the monster.")
-//            }
+            on<AdventureEvent.RunAway>().transitionWith<AdventureState.GameOver> { _, _ ->
+                AdventureState.GameOver("You try to get away but trip and are eaten by the monster.")
+            }
         }
 
         state<AdventureState.GameOver> {
@@ -59,9 +59,9 @@ sealed interface AdventureEvent {
     object GoRight : AdventureEvent
 
     object CrossBridge : AdventureEvent
-    object EnterCave : AdventureEvent
+    data class EnterCave(val monsterName: String)  : AdventureEvent
 
-    data class Fight(val monsterName: String) : AdventureEvent
+    class Fight: AdventureEvent
     object RunAway : AdventureEvent
 
     object Restart : AdventureEvent

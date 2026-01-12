@@ -51,9 +51,7 @@ fun AdventureScreen(adventureViewModel: AdventureViewModel) {
                 text = "A ${(state as AdventureState.FightMonster).monster} attacks!",
                 buttons = listOf(
                     "Fight" to {
-                        // Generate a random monster, probably shouldn't do this from the UI but you get
-                        // the idea - you can pass event inputs into your graph.
-                        adventureViewModel.dispatchEvent(Fight(randomMonster()))
+                        adventureViewModel.dispatchEvent(Fight())
                    },
                     "Run Away" to { adventureViewModel.dispatchEvent(RunAway) }
                 )
@@ -87,7 +85,9 @@ fun AdventureScreen(adventureViewModel: AdventureViewModel) {
                 text = "You can see the exit of the cave but it still frightens you.",
                 buttons = listOf(
                     "Enter the cave" to {
-                        adventureViewModel.dispatchEvent(EnterCave)
+                        // Generate a random monster, probably shouldn't do this from the UI but you get
+                        // the idea - you can pass event inputs into your graph.
+                        adventureViewModel.dispatchEvent(EnterCave(randomMonster()))
                     },
                     "Turn back" to {
                         adventureViewModel.dispatchEvent(RunAway)

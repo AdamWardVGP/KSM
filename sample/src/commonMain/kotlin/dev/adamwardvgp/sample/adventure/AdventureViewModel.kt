@@ -20,11 +20,11 @@ class AdventureViewModelImpl: ViewModel(), AdventureViewModel {
 }
 
 val monsters = listOf(
-    "Cave Troll",
-    "Goblin King",
-    "Ancient Spider",
-    "Slime Beast",
-    "Skeleton Knight"
+    "\uD83E\uDDCC Cave Troll",
+    "\uD83D\uDC7A Goblin King",
+    "\uD83D\uDD77\uFE0F Ancient Spider",
+    "♘ Evil Stallion",
+    "\uD83D\uDC80 Skeleton Knight"
 )
 
 fun randomMonster(): String = monsters.random()
