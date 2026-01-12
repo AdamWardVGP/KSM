@@ -26,8 +26,9 @@ The state machine itself is:
 - ⛔ Non-reentrant: events are processed serially 
 - 👻 Side effects are explicitly outside the FSM
 
+---
 
-## 🚀 How do I use it
+# 🚀 How do I use it
 
 ## 1. Add the gradle dependency
 ```kotlin
@@ -77,6 +78,7 @@ The state machine itself should not be performing other work internally and func
 
 > ⚠️ I/O, network calls, persistence should be triggered in response to a state transition, and not inside the state machine itself.
 
+---
 
 # 🧠 Sharpen your wits 
 
@@ -85,6 +87,8 @@ Check out the detailed sample KMP app in the `/sample/` directory.
 This demonstrates exposing a `StateFlow` from a `ViewModel` to `@Composable` UI. Since states are data classes, they can also be marked `@Serializable` and stored in Android’s `SavedStateHandle`—so the UI can pick up right where you left off.
 
 Launch the app to jump into a choose your own adventure style dialog flow. Can you defeat the monsters 🧌 and claim the treasure 👑? or will fate have a different plan for you 💀?
+
+---
 
 # 📊 Generate State Machine Diagrams
 
@@ -111,6 +115,8 @@ The diagrams are generated directly from the compiled state graph, and written t
 
 💡 Tip: If the diagram looks wrong, your code might be wrong. These diagrams are a sanity check and a great way to review state transitions visually.
 
+---
+
 # 🙋🏽‍♂️ FAQ
 
 ## Why not sealed classes and `when`?
@@ -135,6 +141,7 @@ KSM solves this by:
 
 If your logic can be described as a flowchart, KSM keeps it a flowchart.
 
+---
 
 Mozilla Public License Version 2.0
 ==================================
