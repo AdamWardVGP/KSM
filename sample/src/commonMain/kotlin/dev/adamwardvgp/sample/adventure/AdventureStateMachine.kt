@@ -45,7 +45,7 @@ fun getAdventureStateMachine(coroutineScope: CoroutineScope): StateMachine<Adven
             on<AdventureEvent.Restart>() transitionTo AdventureState.Start
         }
 
-        state<AdventureState.FightMonster> {
+        state<AdventureState.Treasure> {
             on<AdventureEvent.Restart>() transitionTo AdventureState.Start
         }
     }
