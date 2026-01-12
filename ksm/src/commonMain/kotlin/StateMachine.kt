@@ -17,6 +17,7 @@ data class TransitionId(
 data class Transition<State : Any, Event : Any>(
     val id: TransitionId,
     val from: KClass<out State>,
+    val to: KClass<out State>,
     val event: KClass<out Event>,
     val reduce: (State, Event) -> State
 )
@@ -38,7 +39,7 @@ class StateMachine<State: Any, Event: Any>(
 ) {
 
     private val _currentState = MutableStateFlow(initial)
-    val currentState: StateFlow<State> = _currentState
+    public val currentState: StateFlow<State> = _currentState
 
     // UNLIMITED because:
     // - events are lightweight
@@ -94,7 +95,7 @@ class StateMachine<State: Any, Event: Any>(
  */
 inline fun <reified State: Any, reified Event: Any> stateMachine(
     block: StateMachineBuilder<State, Event>.() -> Unit
-): StateMachine<State,Event> =
+): StateMachine<State, Event> =
     StateMachineBuilder<State, Event>().apply(block).build()
 
 class StateMachineBuilder<State: Any, Event: Any> {
@@ -118,28 +119,30 @@ class StateMachineBuilder<State: Any, Event: Any> {
         }
     }
 
-     class StateTransitionBuilder<FromState : State, State : Any, Event : Any>(private val from: KClass<FromState>) {
+     class StateTransitionBuilder<FromState : State, State : Any, Event : Any>(val from: KClass<FromState>) {
 
         val transitions = mutableMapOf<KClass<out Event>, Transition<State, Event>>()
 
          inline fun <reified EVENT : Event> on(): TransitionBuilder<EVENT> =
              TransitionBuilder(EVENT::class)
 
-        inner class TransitionBuilder<EVENT: Event>(private val event: KClass<EVENT>) {
+        inner class TransitionBuilder<EVENT: Event>(val event: KClass<EVENT>) {
 
-            infix fun transitionWith(target: (State, EVENT) -> State) {
-                transitions[event] = Transition(
-                    id = TransitionId(from, event),
-                    from = from,
-                    event = event,
-                    reduce = { state, evt -> target(state, evt as EVENT) }
-                )
-            }
+//            inline fun <reified ToState: State>transitionTo(crossinline transform: (State, EVENT) -> State) {
+//                transitions[event] = Transition(
+//                    id = TransitionId(from, event),
+//                    from = from,
+//                    to = ToState::class,
+//                    event = event,
+//                    reduce = { state, evt -> transform(state, evt as EVENT) }
+//                )
+//            }
 
             infix fun transitionTo(target: State) {
                 transitions[event] = Transition(
                     id = TransitionId(from, event),
                     from = from,
+                    to = target::class,
                     event = event,
                     reduce = { _, _ -> target }
                 )

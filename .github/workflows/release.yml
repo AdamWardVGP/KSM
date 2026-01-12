@@ -1,0 +1,26 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Extract version
+        run: |
+          echo "VERSION_NAME=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+
+      - name: Build
+        run: ./gradlew build

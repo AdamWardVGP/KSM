@@ -1,6 +1,6 @@
-# ✂️ Klipper
+# 🔁 KSM
 
-Cut through spaghetti state logic with a finite state machine for Kotlin Multiplatform
+A finite state machine for Kotlin Multiplatform
 
 [![Maven Central](https://img.shields.io/maven-central/v/dev.adamwardvgp.ksm/runtime.svg)](https://github.com/AdamWardVGP/KSM/releases)
 [![Build Status](https://github.com/AdamWardVGP/ksm/actions/workflows/ci.yml/badge.svg)](https://github.com/AdamWardVGP/ksm/actions/workflows/ci.yml)
@@ -8,15 +8,11 @@ Cut through spaghetti state logic with a finite state machine for Kotlin Multipl
 
 ---
 
-# What is Klipper
+# 🔎 What is KSM
 
-Klipper is a deterministic, reflection-free finite state machine for defining explicit state graphs.
+KSM is a finite state machine for defining explicit state graphs.
 It is designed for application flows where correctness, predictability, and observability matter
-more than convenience abstractions.
-
-This library comes from a repeated pattern: onboarding flows, permission gates, startup logic,
-and other “flowchart-shaped” problems that don’t express cleanly in MVVM, reducers, or with a growing bowl of spaghetti code made up of boolean noodles 🍜.
-KSM treats these problems as what they are — state graphs — and makes them executable.
+more than convenient abstractions.
 
 In particular this state machine offers a few nice features:
 - 🏗️ Easy graph creation via DSL
@@ -31,11 +27,11 @@ The state machine itself is:
 - 👻 Side effects are explicitly outside the FSM
 
 
-## How do I use it
+## 🚀 How do I use it
 
 ## 1. Add the gradle dependency
 ```kotlin
-    implementation("dev.adamwardvgp.ksm:ksm:<version>")
+implementation("dev.adamwardvgp.ksm:ksm:<version>")
 ```
 
 ## 2. Defines a state graphs with a DSL builder.
@@ -67,7 +63,7 @@ val appLaunchStateMachine = stateMachine<AppStates, AppEvents> {
 
 ```kotlin
 //Just collect the flow
-appLaunchStateMachine.currentState.collect { newState-> ... }
+appLaunchStateMachine.currentState.collect { newState -> ... }
 
 //And then dispatch events to the machine to trigger transitions to new states
 appLaunchStateMachine.dispatchEvent(EulaOutOfDate)
@@ -77,20 +73,24 @@ appLaunchStateMachine.dispatchEvent(EulaOutOfDate)
 
 Your current state will transition into the next state based on received Events. 
 
-The state machine itself should not be performing other work internally and functions purely as a mapper `(CurrentState, Event) -> ResultState`.
+The state machine itself should not be performing other work internally and function purely as a mapper `(CurrentState, Event) -> ResultState`.
 
 > ⚠️ I/O, network calls, persistence should be triggered in response to a state transition, and not inside the state machine itself.
 
 
-# What do you use it for?
+# 🧠 Sharpen your wits 
 
-My specific use case at the moment - exposing a StateFlow from a ViewModel to composables. Since states are data classes we can also mark them as `@Serializable` and throw them into Android's `savedStateHandle` to get back to where we were.
+Check out the detailed sample KMP app in the `/sample/` directory.
 
-check out `/samples/KmpApp` for more detailed source
+This demonstrates exposing a `StateFlow` from a `ViewModel` to `@Composable` UI. Since states are data classes, they can also be marked `@Serializable` and stored in Android’s `SavedStateHandle`—so the UI can pick up right where you left off.
 
-# You said free graphs?
+Launch the app to jump into a choose your own adventure style dialog flow. Can you defeat the monsters 🧌 and claim the treasure 👑? or will fate have a different plan for you 💀?
 
-Yes I did. You can run a gradle task `./gradlew graphKSM` to pull render out all the state machines in your project into Mermaid diagrams.
+# 📊 Generate State Machine Diagrams
+
+All KSM state machines in your project can be exported as Mermaid diagrams for free!
+
+You can run a gradle task `./gradlew graphKSM` to pull render out all the state machines in your project into Mermaid diagrams.
 
 ```mermaid
 stateDiagram-v2
@@ -109,21 +109,9 @@ Login.Failed --> GoToMain : LoginSuccess
 
 The diagrams are generated directly from the compiled state graph, and written to `build/ksm/ as `.mmd` files. 
 
-While you should still test write tests for your state machine this gives a good way to sanity check.
+💡 Tip: If the diagram looks wrong, your code might be wrong. These diagrams are a sanity check and a great way to review state transitions visually.
 
-💡 If the diagram is wrong → the code is wrong.
-
-## What KSM is not
-
-- Not Redux / MVI
-- Not a workflow engine
-- Not a side-effect runner
-- Not a persistence layer
-- Not responsible for rendering UI
-
-🌐 KSM is a state graph. It describes StateB comes after StateA when EventNext happens. nothing more.
-
-# FAQ
+# 🙋🏽‍♂️ FAQ
 
 ## Why not sealed classes and `when`?
 
@@ -137,7 +125,7 @@ Typical problems with `when`-based transitions:
 - Any state can go to any other state, leading to consistency issues
 - You cannot export or visualize the flow
 - Some poor teammate comes in years later and takes a week to draw his own diagram to debug whats going on.
-- Once 5 states interconnect you create a pentagram and accidentally summon demons into your codebase 😈
+- Once 5 states interconnect you create a pentagram which results in summoning demons into your codebase 😈
 
 KSM solves this by:
 - Defining the entire state graph in one place
@@ -150,6 +138,8 @@ If your logic can be described as a flowchart, KSM keeps it a flowchart.
 
 Mozilla Public License Version 2.0
 ==================================
+
+Copyright (C) 2025 Adam Ward
 
 This Source Code Form is subject to the terms of the Mozilla Public
 License, v. 2.0. If a copy of the MPL was not distributed with this

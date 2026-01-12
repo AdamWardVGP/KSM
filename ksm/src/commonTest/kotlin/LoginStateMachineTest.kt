@@ -4,15 +4,12 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
-import org.example.AppEvents
-import org.example.AppEvents.*
-import org.example.AppStates
-import org.example.AppStates.*
-import org.example.LoginFailureReason
+import AppEvents.*
+import AppStates.*
 import org.example.stateMachine
-import org.junit.jupiter.api.Assertions.assertTrue
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AppStartStateMachineTest {
@@ -27,19 +24,17 @@ class AppStartStateMachineTest {
 
             state<Uninitialized> {
                 on<EulaOutOfDate>() transitionTo RequestEula
-                on<EulaAccepted>() transitionTo Login.RequestInput
+                on<EulaAccepted>() transitionTo Login.CredentialsPrompt
             }
 
             state<RequestEula> {
-                on<EulaAccepted>() transitionTo Login.RequestInput
+                on<EulaAccepted>() transitionTo Login.CredentialsPrompt
                 on<EulaDenied>() transitionTo ExitApp
             }
 
             state<Login> {
                 on<LoginSuccess>() transitionTo GoToMain
-                on<LoginFailed>() transitionWith { _, event ->
-                    Login.Failed(event.reason)
-                }
+                on<LoginFailed>() transitionTo Login.LoginFailed
             }
         }
 
@@ -51,7 +46,7 @@ class AppStartStateMachineTest {
             assertEquals(Uninitialized, awaitItem())
 
             fsm.dispatchEvent(EulaAccepted)
-            assertEquals(Login.RequestInput, awaitItem())
+            assertEquals(Login.CredentialsPrompt, awaitItem())
 
             fsm.dispatchEvent(LoginSuccess)
             assertEquals(GoToMain, awaitItem())
@@ -85,23 +80,23 @@ class AppStartStateMachineTest {
 
     @Test
     fun `login failure transitions with reason`() = testScope.runTest {
-        val fsm = newMachine(Login.RequestInput)
+        val fsm = newMachine(Login.CredentialsPrompt)
 
         fsm.currentState.test {
-            assertEquals(Login.RequestInput, awaitItem())
+            assertEquals(Login.CredentialsPrompt, awaitItem())
 
             val reason = LoginFailureReason.InvalidPassword
-            fsm.dispatchEvent(LoginFailed(reason))
+            fsm.dispatchEvent(LoginFailed)
+//            fsm.dispatchEvent(LoginFailed(reason))
 
             val resultState = awaitItem()
-            assertTrue(resultState is Login.Failed)
-            assertEquals(reason, (resultState as Login.Failed).reason)
+            assertTrue(resultState is Login.LoginFailed)
+//            assertEquals(reason, (resultState as Login.Failed).reason)
 
             cancelAndIgnoreRemainingEvents()
         }
 
         testScope.backgroundScope.cancel()
     }
-
 
 }

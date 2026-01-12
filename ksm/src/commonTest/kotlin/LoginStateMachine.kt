@@ -1,15 +1,15 @@
-package org.example
-
-import org.example.AppStates.*
-import org.example.AppEvents.*
+import AppStates.*
+import AppEvents.*
+import org.example.stateMachine
 
 sealed class AppStates {
     object Uninitialized : AppStates()
     object RequestEula : AppStates()
     object ExitApp : AppStates()
     sealed class Login : AppStates() {
-        object RequestInput : Login()
-        class Failed(val reason: LoginFailureReason) : Login()
+        object CredentialsPrompt : Login()
+        object LoginFailed: Login()
+//        class Failed(val reason: LoginFailureReason) : Login()
     }
     object GoToMain : AppStates()
 }
@@ -24,24 +24,26 @@ sealed class AppEvents {
     object EulaAccepted : AppEvents()
     object EulaDenied : AppEvents()
     object LoginSuccess : AppEvents()
-    data class LoginFailed(val reason: LoginFailureReason) : AppEvents()
+    object LoginFailed : AppEvents()
+//    data class LoginFailed(val reason: LoginFailureReason) : AppEvents()
 }
 
 val appStartStateMachine = stateMachine {
 
     state<Uninitialized> {
         on<EulaOutOfDate>() transitionTo RequestEula
-        on<EulaAccepted>() transitionTo Login.RequestInput
+        on<EulaAccepted>() transitionTo Login.CredentialsPrompt
     }
 
     state<RequestEula> {
-        on<EulaAccepted>() transitionTo Login.RequestInput
+        on<EulaAccepted>() transitionTo Login.CredentialsPrompt
         on<EulaDenied>() transitionTo ExitApp
     }
 
-    state<Login> {
+    state<Login.CredentialsPrompt> {
         on<LoginSuccess>() transitionTo GoToMain
-        on<LoginFailed>() transitionWith { _, event -> Login.Failed(event.reason) }
+        on<LoginFailed>() transitionTo Login.LoginFailed
+//        on<LoginFailed>() transitionTo<Login.Failed:class> { _, event -> Login.Failed(event.reason) }
     }
 
 }
