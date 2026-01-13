@@ -1,5 +1,6 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -83,5 +84,13 @@ compose.desktop {
             packageName = "dev.adamwardvgp.sample.adventure"
             packageVersion = "1.0.0"
         }
+    }
+}
+
+tasks.withType<KotlinCompile>().configureEach {
+    compilerOptions {
+        freeCompilerArgs.addAll("-Xplugin=${rootDir}/ksm-ir-plugin/build/libs/ksm-ir-plugin.jar",
+            "-P",
+            "plugin:ksm-ir-plugin:outputDir=${layout.buildDirectory}/ksmGraphs")
     }
 }

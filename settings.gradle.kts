@@ -34,3 +34,4 @@ plugins {
 
 include(":ksm")
 include(":sample")
+include(":ksm-ir-plugin")

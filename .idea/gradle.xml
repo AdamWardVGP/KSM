@@ -12,6 +12,7 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/ksm" />
+            <option value="$PROJECT_DIR$/ksm-ir-plugin" />
             <option value="$PROJECT_DIR$/sample" />
           </set>
         </option>

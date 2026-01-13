@@ -1,0 +1,7 @@
+package model
+
+data class Graph(
+    val name: String,
+    val states: MutableSet<String> = mutableSetOf(),
+    val edges: MutableList<Edge> = mutableListOf()
+)
