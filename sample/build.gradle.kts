@@ -1,5 +1,10 @@
+import org.gradle.declarative.dsl.schema.FqName.Empty.packageName
+import org.gradle.kotlin.dsl.support.kotlinCompilerOptions
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import org.jetbrains.compose.reload.core.Environment.Companion.application
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.internal.builtins.StandardNames.FqNames.target
+import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -11,11 +16,7 @@ plugins {
 }
 
 kotlin {
-    androidTarget {
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_21)
-        }
-    }
+    androidTarget()
     jvm()
 
     sourceSets {
@@ -42,6 +43,15 @@ kotlin {
             implementation(libs.kotlinx.coroutinesSwing)
         }
     }
+    
+    compilerOptions {
+        freeCompilerArgs.set(
+            freeCompilerArgs.get() + listOf("-Xplugin=${rootDir}/ksm-ir-plugin/build/libs/ksm-ir-plugin-0.1.0.jar",
+                "-P", "plugin:ksm-ir-plugin:outputDir=${buildDir.absolutePath}/ksmGraphs")
+        )
+    }
+
+    logging.captureStandardOutput(LogLevel.INFO)
 }
 
 android {
@@ -84,13 +94,5 @@ compose.desktop {
             packageName = "dev.adamwardvgp.sample.adventure"
             packageVersion = "1.0.0"
         }
-    }
-}
-
-tasks.withType<KotlinCompile>().configureEach {
-    compilerOptions {
-        freeCompilerArgs.addAll("-Xplugin=${rootDir}/ksm-ir-plugin/build/libs/ksm-ir-plugin.jar",
-            "-P",
-            "plugin:ksm-ir-plugin:outputDir=${layout.buildDirectory}/ksmGraphs")
     }
 }

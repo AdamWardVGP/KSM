@@ -1,4 +1,4 @@
-package model
+package dev.adamwardvgp.ksm.ir.model
 
 data class Edge(
     val from: String,
