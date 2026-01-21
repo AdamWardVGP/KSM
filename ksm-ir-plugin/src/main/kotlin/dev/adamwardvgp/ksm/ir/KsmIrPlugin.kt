@@ -4,6 +4,7 @@ import dev.adamwardvgp.ksm.ir.model.Edge
 import dev.adamwardvgp.ksm.ir.model.Graph
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
+import org.jetbrains.kotlin.builtins.StandardNames.FqNames.target
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.declarations.IrDeclaration
@@ -108,7 +109,21 @@ class StateMachineDslVisitor(
     }
 
     private var currentState: String? = null
-    private var currentEvent: String? = "UNKNOWN"
+    private var currentEvent: String? = null
+
+    private var targetState: String? = null
+
+    fun checkAddItems() {
+        if(currentState != null && currentEvent != null && targetState != null) {
+            graph.edges.add(
+                Edge(
+                    from = currentState ?: "UNKNOWN",
+                    to = targetState ?: "UNKNOWN",
+                    event = currentEvent ?: "UNKNOWN"
+                )
+            )
+        }
+    }
 
     override fun visitCall(expression: IrCall) {
 
@@ -119,7 +134,7 @@ class StateMachineDslVisitor(
                 val typeArg = expression.typeArguments.firstOrNull()
                 currentState = typeArg?.render()?.split(".")?.last() ?: "UnknownState"
 
-                logger?.report(CompilerMessageSeverity.INFO, "Adding state $currentState")
+                logger?.report(CompilerMessageSeverity.INFO, "Adding state [$currentState]")
                 graph.states.add(currentState!!)
             }
 
@@ -127,42 +142,31 @@ class StateMachineDslVisitor(
                 // on<E>()
                 val typeArg = expression.typeArguments.firstOrNull()
                 currentEvent = typeArg?.classHierarchyName() ?: "UnknownEvent"
+                logger?.report(
+                    CompilerMessageSeverity.INFO,
+                    "Adding event [$currentEvent]"
+                )
+                checkAddItems()
             }
 
             "transitionTo" -> {
 
-                val target = expression.arguments[1]?.type?.classHierarchyName()
+                targetState = expression.arguments[1]?.type?.classHierarchyName()
                     ?: "UnknownTarget"
 
                 logger?.report(
                     CompilerMessageSeverity.INFO,
-                    "Adding transitionTo from state [$currentState] on event [$currentEvent] to state [$target]"
+                    "Adding transitionTo [$targetState]"
                 )
-                graph.edges.add(
-                    Edge(
-                        from = currentState ?: "UNKNOWN",
-                        to = target,
-                        event = currentEvent ?: "UNKNOWN"
-                    )
-                )
-                currentEvent = "UNKNOWN"
             }
             "transitionWith" -> {
-                val target = expression.typeArguments.firstOrNull()?.classHierarchyName()
+                targetState = expression.typeArguments.firstOrNull()?.classHierarchyName()
                     ?: "UnknownTarget"
 
                 logger?.report(
                     CompilerMessageSeverity.INFO,
-                    "Adding transitionWith from state [$currentState] on event [$currentEvent] to state [$target]"
+                    "Adding transitionWith  [$targetState]"
                 )
-                graph.edges.add(
-                    Edge(
-                        from = currentState ?: "UNKNOWN",
-                        to = target,
-                        event = currentEvent ?: "UNKNOWN"
-                    )
-                )
-                currentEvent = "UNKNOWN"
             }
         }
 
