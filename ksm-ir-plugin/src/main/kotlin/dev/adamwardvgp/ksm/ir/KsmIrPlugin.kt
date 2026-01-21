@@ -56,7 +56,7 @@ class KsmIrVisitor(
     }
 
     private val outputDir: File by lazy {
-        File(System.getProperty("user.home"), "build/ksmGraphs").apply { mkdirs() }
+        File(System.getProperty("user.home"), "ksmGraphs").apply { mkdirs() }
     }
 
     override fun visitCall(expression: IrCall) {
@@ -131,12 +131,8 @@ class StateMachineDslVisitor(
 
             "transitionTo" -> {
 
-                val target = expression.arguments[0]
-                val type = target?.type
-                val name = type?.classHierarchyName()
+                val target = expression.arguments[1]?.type?.classHierarchyName()
                     ?: "UnknownTarget"
-
-                logger?.report(CompilerMessageSeverity.INFO, "DEBUG $target,    $type,    $name")
 
                 logger?.report(
                     CompilerMessageSeverity.INFO,
@@ -145,7 +141,7 @@ class StateMachineDslVisitor(
                 graph.edges.add(
                     Edge(
                         from = currentState ?: "UNKNOWN",
-                        to = name,
+                        to = target,
                         event = currentEvent ?: "UNKNOWN"
                     )
                 )
@@ -182,16 +178,10 @@ object MermaidWriter {
 
     fun toMermaid(graph: Graph): String {
         val sb = StringBuilder()
-        sb.appendLine("graph TD") // Mermaid top-down graph
+        sb.appendLine("stateDiagram-v2")
 
-        // Declare states
-        for (state in graph.states) {
-            sb.appendLine("    $state[\"$state\"]")
-        }
-
-        // Declare edges
         for (edge in graph.edges) {
-            sb.appendLine("    ${edge.from} --> ${edge.event}: ${edge.to}")
+            sb.appendLine("    ${edge.from} --> ${edge.to}: ${edge.event}")
         }
 
         return sb.toString()
@@ -213,5 +203,6 @@ private fun IrType.classHierarchyName(): String {
         if (parent == null || parent is IrPackageFragment) break
         current = parent
     }
+    names.removeAt(0)
     return names.joinToString(".")
 }
