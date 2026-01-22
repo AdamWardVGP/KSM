@@ -11,13 +11,11 @@ A finite state machine for Kotlin Multiplatform
 # 🔎 What is KSM
 
 KSM is a finite state machine for defining explicit state graphs.
-It is designed for application flows where correctness, predictability, and observability matter
-more than convenient abstractions.
 
 In particular this state machine offers a few nice features:
 - 🏗️ Easy graph creation via DSL
-- 💽 Supports data classes as States, with Events that can carry payloads used to construct them
-- 🌊 States are observable via Flow
+- 💽 Data classes as States, with Events that can carry payloads used to construct them
+- 🌊 Transitions observable via Flow
 - 🧜‍♀️ Exportable directly to Mermaid diagrams
 
 The state machine itself is:
@@ -42,12 +40,15 @@ implementation("dev.adamwardvgp.ksm:ksm:<version>")
 val appLaunchStateMachine = stateMachine<AppStates, AppEvents> {
     
     initialState = AppStates.Uninitialized //Tell the machine what state to start in
-    dispatchedOn = coroutineScope //Give it a context to collect events and run them
+    dispatchedOn = coroutineScope //Give it a context to dispatch events and run them
     
-    //define the "fromState"
+    //Then create your graph:
+    //define A "fromState"
     state<AppStates.Uninitialized> {
-        //"on" specifies what event transitions to a new state
+        //"on" specifies what event triggers an event
+        // and "transitionTo" says what state to go to.
         on<AppEvents.EulaOutOfDate>() transitionTo AppStates.RequestEula
+        
         //States can be nested sealed classes
         on<AppEvents.EulaAccepted>() transitionTo AppStates.Login.CredentialsPrompt
     }
@@ -70,11 +71,9 @@ appLaunchStateMachine.currentState.collect { newState -> ... }
 appLaunchStateMachine.dispatchEvent(EulaOutOfDate)
 ```
 
-## Outcomes and Guidelines
+## Guidelines
 
-Your current state will transition into the next state based on received Events. 
-
-The state machine itself should not be performing other work internally and function purely as a mapper `(CurrentState, Event) -> ResultState`.
+The state machine itself should not be performing work internally and is intended to function purely as a mapper `(CurrentState, Event) -> ResultState`.
 
 > ⚠️ I/O, network calls, persistence should be triggered in response to a state transition, and not inside the state machine itself.
 
@@ -92,7 +91,7 @@ Launch the app to jump into a choose your own adventure style dialog flow. Can y
 
 # 📊 Generate State Machine Diagrams
 
-All KSM state machines in your project can be exported as Mermaid diagrams for free!
+All KSM state machines in your project can be exported as Mermaid diagrams via a Kotlin IR plugin.
 
 You can run a gradle task `./gradlew graphKSM` to pull render out all the state machines in your project into Mermaid diagrams.
 
@@ -122,16 +121,13 @@ The diagrams are generated directly from the compiled state graph, and written t
 ## Why not sealed classes and `when`?
 
 You can model state transitions with sealed classes and `when` statements.
-Most teams do — until the logic spreads across multiple files and loses its shape.
+Most teams do and it works fine till your codebase begins to grow.
 
 Typical problems with `when`-based transitions:
-- Transitions are implicit and scattered
-- There is no single source of truth for the graph
-- It is easy to add a new state without updating all transitions
-- Any state can go to any other state, leading to consistency issues
-- You cannot export or visualize the flow
-- Some poor teammate comes in years later and takes a week to draw his own diagram to debug whats going on.
-- Once 5 states interconnect you create a pentagram which results in summoning demons into your codebase 😈
+- There is no enforcement in which state can go to any other state, and oftentimes
+bugs come from these unexpected transitions.
+- If ordering of transitions does matter, there's no documentation of it, and is often lost in
+institutional knowledge.
 
 KSM solves this by:
 - Defining the entire state graph in one place
