@@ -1,7 +1,7 @@
-package dev.adamwardvgp.ksm.ir
+package coffee.adammakes.ksm.ir
 
-import dev.adamwardvgp.ksm.ir.model.Edge
-import dev.adamwardvgp.ksm.ir.model.Graph
+import coffee.adammakes.ksm.ir.model.Edge
+import coffee.adammakes.ksm.ir.model.Graph
 import org.junit.Test
 import kotlin.test.assertEquals
 

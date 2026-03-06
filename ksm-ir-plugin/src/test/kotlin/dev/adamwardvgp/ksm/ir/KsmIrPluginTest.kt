@@ -1,4 +1,4 @@
-package dev.adamwardvgp.ksm.ir
+package coffee.adammakes.ksm.ir
 
 
 import com.tschuchort.compiletesting.KotlinCompilation
@@ -12,9 +12,9 @@ class KsmIrPluginTest {
 
     companion object {
         private const val testSource = """
-            package dev.adamwardvgp.ksm.test
+            package coffee.adammakes.ksm.test
 
-            import org.example.stateMachine
+            import coffee.adammakes.ksm.stateMachine
             import kotlinx.coroutines.GlobalScope
 
             sealed class TestState {

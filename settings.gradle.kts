@@ -2,7 +2,9 @@ rootProject.name = "ksm-project"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
+    includeBuild("ksm-ir-plugin")
     repositories {
+        mavenLocal()
         google {
             mavenContent {
                 includeGroupAndSubgroups("androidx")
@@ -34,4 +36,3 @@ plugins {
 
 include(":ksm")
 include(":sample")
-include(":ksm-ir-plugin")

@@ -1,7 +1,6 @@
-package dev.adamwardvgp.ksm.ir
+package coffee.adammakes.ksm.ir
 
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
-import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
@@ -9,6 +8,7 @@ import org.jetbrains.kotlin.config.CommonConfigurationKeys
 import org.jetbrains.kotlin.config.CompilerConfiguration
 
 var logger: MessageCollector? = null
+
 @OptIn(ExperimentalCompilerApi::class)
 /**
  * Step 1:
@@ -17,7 +17,7 @@ var logger: MessageCollector? = null
 class KsmIrComponentRegistrar : CompilerPluginRegistrar() {
 
     override val pluginId: String
-        get() = "ksm-ir-plugin"
+        get() = "coffee.adammakes.ksm.ir"
 
     override val supportsK2: Boolean
         get() = true
@@ -25,9 +25,9 @@ class KsmIrComponentRegistrar : CompilerPluginRegistrar() {
     override fun ExtensionStorage.registerExtensions(configuration: CompilerConfiguration) {
         logger = configuration.get(CommonConfigurationKeys.MESSAGE_COLLECTOR_KEY, MessageCollector.NONE)
 
-        logger?.report(CompilerMessageSeverity.INFO, "!!!!!Registering KSM IR plugin!!!!!")
+        val outputDir = configuration.get(OUTPUT_DIR_KEY)
         IrGenerationExtension.registerExtension(
-            extension = KsmIrGenerationExtension()
+            extension = KsmIrGenerationExtension(outputDir)
         )
     }
 }

@@ -1,7 +1,7 @@
-package dev.adamwardvgp.ksm.ir
+package coffee.adammakes.ksm.ir
 
-import dev.adamwardvgp.ksm.ir.model.Edge
-import dev.adamwardvgp.ksm.ir.model.Graph
+import coffee.adammakes.ksm.ir.model.Edge
+import coffee.adammakes.ksm.ir.model.Graph
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
@@ -25,14 +25,14 @@ import java.io.File
  * Step 2:
  * Implement our IrGenerationExtension which searches files and calls our visitor.
  */
-class KsmIrGenerationExtension : IrGenerationExtension {
+class KsmIrGenerationExtension(private val outputDir: String?) : IrGenerationExtension {
     override fun generate(
         moduleFragment: IrModuleFragment,
         pluginContext: IrPluginContext
     ) {
         moduleFragment.files.forEach { file ->
             file.accept(
-                KsmIrVisitor(pluginContext),
+                KsmIrVisitor(pluginContext, outputDir),
                 null
             )
         }
@@ -47,7 +47,8 @@ class KsmIrGenerationExtension : IrGenerationExtension {
  * Once it's been processed output the mermaid writer
  */
 class KsmIrVisitor(
-    private val context: IrPluginContext
+    private val context: IrPluginContext,
+    private val outputDirPath: String?
 ) : IrVisitorVoid() {
 
     override fun visitElement(element: IrElement) {
@@ -55,7 +56,8 @@ class KsmIrVisitor(
     }
 
     private val outputDir: File by lazy {
-        File(System.getProperty("user.home"), "ksmGraphs").apply { mkdirs() }
+        val dir = outputDirPath?.let { File(it) } ?: File(System.getProperty("user.home"), "ksmGraphs")
+        dir.apply { mkdirs() }
     }
 
     override fun visitCall(expression: IrCall) {
