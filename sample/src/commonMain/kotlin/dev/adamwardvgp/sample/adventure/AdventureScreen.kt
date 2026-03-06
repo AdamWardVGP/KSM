@@ -1,14 +1,21 @@
 package dev.adamwardvgp.sample.adventure
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import dev.adamwardvgp.sample.adventure.AdventureEvent.*
 
 @Composable
@@ -104,20 +111,19 @@ fun AdventureDialog(
     text: String,
     buttons: List<Pair<String, () -> Unit>>
 ) {
-    AlertDialog(
-        onDismissRequest = {},
-        title = { Text(title) },
-        text = { Text(text) },
-        confirmButton = {
-            Row {
-                Spacer(modifier = Modifier.weight(1.0f))
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(
+            modifier = Modifier.padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(title, style = MaterialTheme.typography.headlineMedium)
+            Text(text, style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 buttons.forEach { (label, action) ->
-                    Button(onClick = action) {
-                        Text(label)
-                    }
-                    Spacer(modifier = Modifier.weight(1.0f))
+                    Button(onClick = action) { Text(label) }
                 }
             }
         }
-    )
+    }
 }
