@@ -1,13 +1,17 @@
 package dev.adamwardvgp.sample.adventure
 
+import coffee.adammakes.ksm.StateMachine
+import coffee.adammakes.ksm.stateMachine
 import kotlinx.coroutines.CoroutineScope
-import org.example.StateMachine
-import org.example.stateMachine
+import kotlinx.serialization.Serializable
 
-fun getAdventureStateMachine(coroutineScope: CoroutineScope): StateMachine<AdventureState, AdventureEvent> {
+fun getAdventureStateMachine(
+    coroutineScope: CoroutineScope,
+    initialState: AdventureState = AdventureState.Start
+): StateMachine<AdventureState, AdventureEvent> {
     return stateMachine<AdventureState, AdventureEvent> {
 
-        initialState = AdventureState.Start
+        this.initialState = initialState
         dispatchedOn = coroutineScope
 
         state<AdventureState.Start> {
@@ -67,15 +71,22 @@ sealed interface AdventureEvent {
     object Restart : AdventureEvent
 }
 
+@Serializable
 sealed interface AdventureState {
+    @Serializable
     object Start : AdventureState
+    @Serializable
     object DarkForest : AdventureState
+    @Serializable
     object OldBridge : AdventureState
+    @Serializable
     object CaveEntrance : AdventureState
 
+    @Serializable
     data class FightMonster(val monster: String) : AdventureState
 
+    @Serializable
     object Treasure : AdventureState
+    @Serializable
     data class GameOver(val reason: String) : AdventureState
 }
-
