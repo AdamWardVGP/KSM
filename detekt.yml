@@ -1,0 +1,17 @@
+build:
+  maxIssues: 0
+
+complexity:
+  TooManyFunctions:
+    active: false
+
+style:
+  MagicNumber:
+    active: false
+  WildcardImport:
+    active: false
+
+naming:
+  FunctionNaming:
+    # Allow backtick test names
+    active: false

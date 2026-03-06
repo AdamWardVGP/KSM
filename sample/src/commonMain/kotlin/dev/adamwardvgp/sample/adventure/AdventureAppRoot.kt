@@ -11,13 +11,13 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 @Composable
 @Preview
 fun AdventureAppRoot() {
-    MaterialTheme {
-        AdventureScreen(
-            adventureViewModel = viewModel<AdventureViewModelImpl>(
-                factory = viewModelFactory {
-                    initializer { AdventureViewModelImpl(createSavedStateHandle()) }
-                }
-            )
+  MaterialTheme {
+    AdventureScreen(
+      adventureViewModel =
+        viewModel<AdventureViewModelImpl>(
+          factory =
+            viewModelFactory { initializer { AdventureViewModelImpl(createSavedStateHandle()) } }
         )
-    }
+    )
+  }
 }
