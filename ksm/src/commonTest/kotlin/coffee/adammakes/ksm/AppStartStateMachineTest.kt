@@ -1,103 +1,103 @@
 package coffee.adammakes.ksm
 
 import app.cash.turbine.test
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.runTest
 import coffee.adammakes.ksm.AppEvents.*
 import coffee.adammakes.ksm.AppStates.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runTest
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AppStartStateMachineTest {
 
-    private val testDispatcher = StandardTestDispatcher()
-    private val testScope = TestScope(testDispatcher)
+  private val testDispatcher = StandardTestDispatcher()
+  private val testScope = TestScope(testDispatcher)
 
-    private fun newMachine(initial: AppStates) =
-        stateMachine<AppStates, AppEvents> {
-            initialState = initial
-            dispatchedOn = testScope.backgroundScope
+  private fun newMachine(initial: AppStates) =
+    stateMachine<AppStates, AppEvents> {
+      initialState = initial
+      dispatchedOn = testScope.backgroundScope
 
-            state<Uninitialized> {
-                on<EulaOutOfDate>() transitionTo RequestEula
-                on<EulaAccepted>() transitionTo Login.CredentialsPrompt
-            }
+      state<Uninitialized> {
+        on<EulaOutOfDate>() transitionTo RequestEula
+        on<EulaAccepted>() transitionTo Login.CredentialsPrompt
+      }
 
-            state<RequestEula> {
-                on<EulaAccepted>() transitionTo Login.CredentialsPrompt
-                on<EulaDenied>() transitionTo ExitApp
-            }
+      state<RequestEula> {
+        on<EulaAccepted>() transitionTo Login.CredentialsPrompt
+        on<EulaDenied>() transitionTo ExitApp
+      }
 
-            state<Login> {
-                on<LoginSuccess>() transitionTo GoToMain
-                on<LoginFailed>() transitionTo Login.LoginFailed
-            }
-        }
-
-    @Test
-    fun `happy path reaches main`() = testScope.runTest {
-        val fsm = newMachine(Uninitialized)
-
-        fsm.currentState.test {
-            assertEquals(Uninitialized, awaitItem())
-
-            fsm.dispatchEvent(EulaAccepted)
-            assertEquals(Login.CredentialsPrompt, awaitItem())
-
-            fsm.dispatchEvent(LoginSuccess)
-            assertEquals(GoToMain, awaitItem())
-
-            cancelAndIgnoreRemainingEvents()
-        }
-
-        testScope.backgroundScope.cancel()
+      state<Login> {
+        on<LoginSuccess>() transitionTo GoToMain
+        on<LoginFailed>() transitionTo Login.LoginFailed
+      }
     }
 
+  @Test
+  fun `happy path reaches main`() =
+    testScope.runTest {
+      val fsm = newMachine(Uninitialized)
 
-    @Test
-    fun `eula denial exits app`() = testScope.runTest {
+      fsm.currentState.test {
+        assertEquals(Uninitialized, awaitItem())
 
-        val fsm = newMachine(Uninitialized)
+        fsm.dispatchEvent(EulaAccepted)
+        assertEquals(Login.CredentialsPrompt, awaitItem())
 
-        fsm.currentState.test {
-            assertEquals(Uninitialized, awaitItem())
+        fsm.dispatchEvent(LoginSuccess)
+        assertEquals(GoToMain, awaitItem())
 
-            fsm.dispatchEvent(EulaOutOfDate)
-            assertEquals(RequestEula, awaitItem())
+        cancelAndIgnoreRemainingEvents()
+      }
 
-            fsm.dispatchEvent(EulaDenied)
-            assertEquals(ExitApp, awaitItem())
-
-            cancelAndIgnoreRemainingEvents()
-        }
-
-        testScope.backgroundScope.cancel()
+      testScope.backgroundScope.cancel()
     }
 
-    @Test
-    fun `login failure transitions with reason`() = testScope.runTest {
-        val fsm = newMachine(Login.CredentialsPrompt)
+  @Test
+  fun `eula denial exits app`() =
+    testScope.runTest {
+      val fsm = newMachine(Uninitialized)
 
-        fsm.currentState.test {
-            assertEquals(Login.CredentialsPrompt, awaitItem())
+      fsm.currentState.test {
+        assertEquals(Uninitialized, awaitItem())
 
-            val reason = LoginFailureReason.InvalidPassword
-            fsm.dispatchEvent(LoginFailed)
-//            fsm.dispatchEvent(LoginFailed(reason))
+        fsm.dispatchEvent(EulaOutOfDate)
+        assertEquals(RequestEula, awaitItem())
 
-            val resultState = awaitItem()
-            assertTrue(resultState is Login.LoginFailed)
-//            assertEquals(reason, (resultState as Login.Failed).reason)
+        fsm.dispatchEvent(EulaDenied)
+        assertEquals(ExitApp, awaitItem())
 
-            cancelAndIgnoreRemainingEvents()
-        }
+        cancelAndIgnoreRemainingEvents()
+      }
 
-        testScope.backgroundScope.cancel()
+      testScope.backgroundScope.cancel()
     }
 
+  @Test
+  fun `login failure transitions with reason`() =
+    testScope.runTest {
+      val fsm = newMachine(Login.CredentialsPrompt)
+
+      fsm.currentState.test {
+        assertEquals(Login.CredentialsPrompt, awaitItem())
+
+        fsm.dispatchEvent(LoginFailed)
+        //            fsm.dispatchEvent(LoginFailed(LoginFailureReason.InvalidPassword))
+
+        val resultState = awaitItem()
+        assertTrue(resultState is Login.LoginFailed)
+        //            assertEquals(LoginFailureReason.InvalidPassword, (resultState as
+        // Login.Failed).reason)
+
+        cancelAndIgnoreRemainingEvents()
+      }
+
+      testScope.backgroundScope.cancel()
+    }
 }
