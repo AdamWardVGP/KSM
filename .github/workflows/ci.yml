@@ -13,7 +13,15 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - name: Check formatting
+        run: ./gradlew spotlessCheck
+      - name: Run Detekt
+        run: ./gradlew detekt
+      - name: Publish KSM to local Maven
+        run: ./gradlew :ksm:publishToMavenLocal
       - name: Publish IR plugin to local Maven
         run: ./gradlew :ksm-ir-plugin:publishToMavenLocal
-      - name: Run tests
+      - name: Run KSM tests
         run: ./gradlew :ksm:jvmTest
+      - name: Run IR plugin tests
+        run: ./gradlew :ksm-ir-plugin:test
