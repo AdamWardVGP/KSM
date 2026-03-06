@@ -1,12 +1,13 @@
+package coffee.adammakes.ksm
+
 import app.cash.turbine.test
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
-import AppEvents.*
-import AppStates.*
-import org.example.stateMachine
+import coffee.adammakes.ksm.AppEvents.*
+import coffee.adammakes.ksm.AppStates.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

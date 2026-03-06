@@ -1,4 +1,4 @@
-package org.example
+package coffee.adammakes.ksm
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel

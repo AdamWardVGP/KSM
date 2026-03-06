@@ -7,12 +7,13 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform) apply false
 }
 
-group = "com.adamwardvgp"
+group = "coffee.adammakes.ksm"
 version = findProperty("VERSION_NAME") ?: "0.0.1-SNAPSHOT"
 
 subprojects {
 
     repositories {
+        mavenLocal()
         mavenCentral()
         google()
     }

@@ -1,6 +1,7 @@
-import AppStates.*
-import AppEvents.*
-import org.example.stateMachine
+package coffee.adammakes.ksm
+
+import coffee.adammakes.ksm.AppStates.*
+import coffee.adammakes.ksm.AppEvents.*
 
 sealed class AppStates {
     object Uninitialized : AppStates()
@@ -9,7 +10,7 @@ sealed class AppStates {
     sealed class Login : AppStates() {
         object CredentialsPrompt : Login()
         object LoginFailed: Login()
-//        class Failed(val reason: LoginFailureReason) : Login()
+//        class Failed(val reason: coffee.adammakes.ksm.LoginFailureReason) : Login()
     }
     object GoToMain : AppStates()
 }
@@ -25,7 +26,7 @@ sealed class AppEvents {
     object EulaDenied : AppEvents()
     object LoginSuccess : AppEvents()
     object LoginFailed : AppEvents()
-//    data class LoginFailed(val reason: LoginFailureReason) : AppEvents()
+//    data class LoginFailed(val reason: coffee.adammakes.ksm.LoginFailureReason) : coffee.adammakes.ksm.AppEvents()
 }
 
 val appStartStateMachine = stateMachine {
