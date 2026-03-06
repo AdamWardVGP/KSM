@@ -2,7 +2,7 @@
 
 A finite state machine for Kotlin Multiplatform
 
-[![Maven Central](https://img.shields.io/maven-central/v/dev.adamwardvgp.ksm/runtime.svg)](https://github.com/AdamWardVGP/KSM/releases)
+[![Maven Central](https://img.shields.io/maven-central/v/coffee.adammakes.ksm/ksm.svg)](https://central.sonatype.com/artifact/coffee.adammakes.ksm/ksm)
 [![Build Status](https://github.com/AdamWardVGP/ksm/actions/workflows/ci.yml/badge.svg)](https://github.com/AdamWardVGP/ksm/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-Mozilla%202.0-blue.svg)](https://www.mozilla.org/en-US/MPL/2.0/)
 
@@ -30,7 +30,7 @@ The state machine itself is:
 
 ## 1. Add the gradle dependency
 ```kotlin
-implementation("dev.adamwardvgp.ksm:ksm:<version>")
+implementation("coffee.adammakes.ksm:ksm:<version>")
 ```
 
 ## 2. Defines a state graphs with a DSL builder.
@@ -146,4 +146,4 @@ Copyright (C) 2025 Adam Ward
 
 This Source Code Form is subject to the terms of the Mozilla Public
 License, v. 2.0. If a copy of the MPL was not distributed with this
-file, You can obtain one at https://mozilla.org/MPL/2.0nah
+file, You can obtain one at https://mozilla.org/MPL/2.0
