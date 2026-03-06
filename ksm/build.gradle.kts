@@ -1,9 +1,10 @@
 plugins {
     kotlin("multiplatform")
     `maven-publish`
+    id("com.vanniktech.maven.publish") version "0.30.0"
 }
 
-group = "com.adamwardvgp.ksm"
+group = "coffee.adammakes.ksm"
 version = version
 
 repositories {
@@ -27,6 +28,32 @@ kotlin {
                 implementation(libs.kotlinx.coroutines.test)
                 implementation(libs.turbine)
             }
+        }
+    }
+}
+
+mavenPublishing {
+    publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.CENTRAL_PORTAL)
+    signAllPublications()
+    coordinates("coffee.adammakes.ksm", "ksm", version.toString())
+    pom {
+        name = "KSM"
+        description = "A finite state machine for Kotlin Multiplatform"
+        url = "https://github.com/AdamWardVGP/KSM"
+        licenses {
+            license {
+                name = "Mozilla Public License 2.0"
+                url = "https://www.mozilla.org/en-US/MPL/2.0/"
+            }
+        }
+        developers {
+            developer {
+                id = "AdamWardVGP"
+                name = "Adam Ward"
+            }
+        }
+        scm {
+            url = "https://github.com/AdamWardVGP/KSM"
         }
     }
 }
