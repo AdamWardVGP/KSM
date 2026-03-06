@@ -1,11 +1,4 @@
-import org.gradle.declarative.dsl.schema.FqName.Empty.packageName
-import org.gradle.kotlin.dsl.support.kotlinCompilerOptions
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
-import org.jetbrains.compose.reload.core.Environment.Companion.application
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.internal.builtins.StandardNames.FqNames.target
-import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -13,6 +6,8 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.composeHotReload)
+    alias(libs.plugins.kotlinSerialization)
+    id("coffee.adammakes.ksm.ir")
 }
 
 kotlin {
@@ -33,6 +28,8 @@ kotlin {
             implementation(compose.components.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
+            implementation(libs.androidx.lifecycle.viewmodelSavedstate)
+            implementation(libs.kotlinx.serialization.json)
             implementation(project(":ksm"))
         }
         commonTest.dependencies {
@@ -42,13 +39,6 @@ kotlin {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
         }
-    }
-    
-    compilerOptions {
-        freeCompilerArgs.set(
-            freeCompilerArgs.get() + listOf("-Xplugin=${rootDir}/ksm-ir-plugin/build/libs/ksm-ir-plugin-0.1.0.jar",
-                "-P", "plugin:ksm-ir-plugin:outputDir=${buildDir.absolutePath}/ksmGraphs")
-        )
     }
 
     logging.captureStandardOutput(LogLevel.INFO)
