@@ -88,12 +88,9 @@ class AppStartStateMachineTest {
         assertEquals(Login.CredentialsPrompt, awaitItem())
 
         fsm.dispatchEvent(LoginFailed)
-        //            fsm.dispatchEvent(LoginFailed(LoginFailureReason.InvalidPassword))
 
         val resultState = awaitItem()
         assertTrue(resultState is Login.LoginFailed)
-        //            assertEquals(LoginFailureReason.InvalidPassword, (resultState as
-        // Login.Failed).reason)
 
         cancelAndIgnoreRemainingEvents()
       }

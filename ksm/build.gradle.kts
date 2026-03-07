@@ -36,7 +36,7 @@ mavenPublishing {
   if (System.getenv("SIGNING_KEY") != null) {
     signAllPublications()
   }
-  coordinates("coffee.adammakes.ksm", "ksm", version.toString())
+  coordinates("coffee.adammakes.ksm", "ksm")
   pom {
     name = "KSM"
     description = "A finite state machine for Kotlin Multiplatform"

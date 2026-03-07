@@ -65,9 +65,7 @@ class KsmIrVisitor(
 
         val owner = expression.symbol.owner.name.asString()
 
-        if (
-            owner == "stateMachine" || owner == "<get-stateMachine>"
-        ) {
+        if (owner == "stateMachine") {
             handleStateMachine(expression)
         }
     }

@@ -123,7 +123,7 @@ stateDiagram-v2
 ## Why not sealed classes and `when`?
 
 You can model state transitions with sealed classes and `when` statements.
-Most teams do and it works fine till your codebase begins to grow.
+Most teams do and it works fine till your codebase begins to grow. You can [read my blog](http://adammakes.coffee/software/65271_ways_to_be_wrong) for more details about why it's a bad idea. But the short and sweet version is this.
 
 Typical problems with `when`-based transitions:
 - There is no enforcement in which state can go to any other state, and oftentimes

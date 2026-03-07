@@ -22,7 +22,7 @@ dependencies {
     compileOnly(libs.kotlin.gradle.plugin.api)
 
     testImplementation("coffee.adammakes.ksm:ksm:0.0.1-SNAPSHOT")
-    testImplementation(kotlin("test"))
+    testImplementation(kotlin("test-junit"))
     testImplementation(libs.kotlin.compile.testing)
     testImplementation(libs.kotlinx.coroutines.core)
 }

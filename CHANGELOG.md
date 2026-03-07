@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.1-alpha] — 2026-03-07
+
 ### Added
 - IR compiler plugin (`ksm-ir-plugin`) that generates Mermaid state diagrams at compile time
 - Gradle plugin DSL support for `ksm-ir-plugin` via `id("coffee.adammakes.ksm.ir")`
@@ -16,12 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - KDoc on all public API
 - Detekt static analysis
 - Spotless formatting with ktfmt
+- `RELEASING.md` with release process documentation
 
 ### Changed
 - Package renamed from `org.example` / `dev.adamwardvgp.ksm` → `coffee.adammakes.ksm`
 - Sample dialog replaced with a flicker-free full-screen composable
+- `VERSION_NAME` introduced in `gradle.properties` for release version management
 
 ### Fixed
 - License URL typo in README
-
-## [0.0.1-SNAPSHOT] — Initial development snapshot
+- IR plugin generating duplicate Mermaid graph files for property-backed state machines
+- `mavenPublishing` coordinates version conflict with project version

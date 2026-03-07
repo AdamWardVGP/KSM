@@ -89,7 +89,7 @@ class KsmIrPluginTest {
                 "Expected at least one .mmd file to be generated in $outputDir"
             )
 
-            val content = mmdFiles!!.first().readText()
+            val content = mmdFiles.first().readText()
             assertTrue(content.contains("stateDiagram-v2"), "Expected stateDiagram-v2 in output")
             assertTrue(content.contains("Initial --> Final: Move"), "Expected transition in output")
         } finally {
