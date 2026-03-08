@@ -4,6 +4,7 @@ plugins {
     kotlin("jvm") version "2.3.0" // version required here; composite build can't use catalog for plugin versions
     `java-gradle-plugin`
     `maven-publish`
+    id("com.vanniktech.maven.publish") version "0.30.0"
 }
 
 group = "coffee.adammakes.ksm"
@@ -17,6 +18,32 @@ gradlePlugin {
             id = "coffee.adammakes.ksm.ir"
             implementationClass = "coffee.adammakes.ksm.ir.KsmGradlePlugin"
         }
+    }
+}
+
+mavenPublishing {
+    publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.CENTRAL_PORTAL)
+    if (System.getenv("SIGNING_KEY") != null) {
+        signAllPublications()
+    }
+    coordinates("coffee.adammakes.ksm", "ksm-ir-plugin")
+    pom {
+        name = "KSM IR Plugin"
+        description = "Kotlin IR compiler plugin for KSM — generates Mermaid state diagrams at compile time"
+        url = "https://github.com/AdamWardVGP/KSM"
+        licenses {
+            license {
+                name = "Mozilla Public License 2.0"
+                url = "https://www.mozilla.org/en-US/MPL/2.0/"
+            }
+        }
+        developers {
+            developer {
+                id = "AdamWardVGP"
+                name = "Adam Ward"
+            }
+        }
+        scm { url = "https://github.com/AdamWardVGP/KSM" }
     }
 }
 
