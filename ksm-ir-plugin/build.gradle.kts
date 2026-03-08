@@ -23,9 +23,7 @@ gradlePlugin {
 
 mavenPublishing {
     publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.CENTRAL_PORTAL)
-    if (System.getenv("SIGNING_KEY") != null) {
-        signAllPublications()
-    }
+    signAllPublications()
     coordinates("coffee.adammakes.ksm", "ksm-ir-plugin")
     pom {
         name = "KSM IR Plugin"
@@ -45,6 +43,10 @@ mavenPublishing {
         }
         scm { url = "https://github.com/AdamWardVGP/KSM" }
     }
+}
+
+tasks.withType<Sign>().configureEach {
+    onlyIf { findProperty("signingInMemoryKey") != null }
 }
 
 //https://github.com/JetBrains/kotlin/blob/master/docs/fir/fir-basics.md

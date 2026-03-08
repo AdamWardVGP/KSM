@@ -33,9 +33,7 @@ kotlin {
 
 mavenPublishing {
   publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.CENTRAL_PORTAL)
-  if (System.getenv("SIGNING_KEY") != null) {
-    signAllPublications()
-  }
+  signAllPublications()
   coordinates("coffee.adammakes.ksm", "ksm")
   pom {
     name = "KSM"
@@ -55,4 +53,8 @@ mavenPublishing {
     }
     scm { url = "https://github.com/AdamWardVGP/KSM" }
   }
+}
+
+tasks.withType<Sign>().configureEach {
+  onlyIf { findProperty("signingInMemoryKey") != null }
 }

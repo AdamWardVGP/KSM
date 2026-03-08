@@ -24,9 +24,14 @@ jobs:
 
       - name: Publish to Maven Central
         env:
-          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
-          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
-          SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
-          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
-          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+          # ORG_GRADLE_PROJECT_* maps env vars to Gradle project properties.
+          # The property names (mavenCentralUsername, signingInMemoryKey, etc.)
+          # are hardcoded in the vanniktech maven-publish plugin and must match exactly.
+          # See: https://vanniktech.github.io/gradle-maven-publish-plugin/central-portal/
+          # The secret names on the right are our GitHub repository secrets.
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_KEY_ID }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
         run: ./gradlew :ksm:publishAndReleaseToMavenCentral :ksm-ir-plugin:publishAndReleaseToMavenCentral --no-configuration-cache
