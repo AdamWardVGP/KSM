@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     kotlin("jvm") version "2.3.0" // version required here; composite build can't use catalog for plugin versions
     `java-gradle-plugin`
@@ -21,8 +23,8 @@ dependencies {
     compileOnly(libs.kotlin.compiler.embeddable)
     compileOnly(libs.kotlin.gradle.plugin.api)
 
-    val ksmVersion = java.util.Properties().apply {
-        file("../gradle.properties").inputStream().use(::load)
+    val ksmVersion = Properties().apply {
+        file("../gradle.properties").inputStream().use { load(it) }
     }.getProperty("VERSION_NAME", "0.0.1-SNAPSHOT")
     testImplementation("coffee.adammakes.ksm:ksm:$ksmVersion")
     testImplementation(kotlin("test-junit"))
