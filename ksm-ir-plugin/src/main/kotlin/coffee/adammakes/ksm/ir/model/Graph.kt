@@ -1,4 +1,4 @@
-package model
+package coffee.adammakes.ksm.ir.model
 
 data class Graph(
     val name: String,

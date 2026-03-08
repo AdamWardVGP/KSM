@@ -1,0 +1,210 @@
+package coffee.adammakes.ksm.ir
+
+import coffee.adammakes.ksm.ir.model.Edge
+import coffee.adammakes.ksm.ir.model.Graph
+import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
+import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
+import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
+import org.jetbrains.kotlin.ir.IrElement
+import org.jetbrains.kotlin.ir.declarations.IrDeclaration
+import org.jetbrains.kotlin.ir.declarations.IrDeclarationWithName
+import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
+import org.jetbrains.kotlin.ir.declarations.IrPackageFragment
+import org.jetbrains.kotlin.ir.expressions.IrCall
+import org.jetbrains.kotlin.ir.expressions.IrFunctionExpression
+import org.jetbrains.kotlin.ir.types.IrSimpleType
+import org.jetbrains.kotlin.ir.types.IrType
+import org.jetbrains.kotlin.ir.types.classifierOrNull
+import org.jetbrains.kotlin.ir.util.render
+import org.jetbrains.kotlin.ir.visitors.IrVisitorVoid
+import org.jetbrains.kotlin.ir.visitors.acceptChildrenVoid
+import java.io.File
+
+
+/**
+ * Step 2:
+ * Implement our IrGenerationExtension which searches files and calls our visitor.
+ */
+class KsmIrGenerationExtension(private val outputDir: String?) : IrGenerationExtension {
+    override fun generate(
+        moduleFragment: IrModuleFragment,
+        pluginContext: IrPluginContext
+    ) {
+        moduleFragment.files.forEach { file ->
+            file.accept(
+                KsmIrVisitor(pluginContext, outputDir),
+                null
+            )
+        }
+    }
+}
+
+/**
+ * Step 3:
+ * Inspect calls looking for methods named "stateMachine".
+ *
+ * Step 5:
+ * Once it's been processed output the mermaid writer
+ */
+class KsmIrVisitor(
+    private val context: IrPluginContext,
+    private val outputDirPath: String?
+) : IrVisitorVoid() {
+
+    override fun visitElement(element: IrElement) {
+        element.acceptChildrenVoid(this)
+    }
+
+    private val outputDir: File by lazy {
+        val dir = outputDirPath?.let { File(it) } ?: File(System.getProperty("user.home"), "ksmGraphs")
+        dir.apply { mkdirs() }
+    }
+
+    override fun visitCall(expression: IrCall) {
+        super.visitCall(expression)
+
+        val owner = expression.symbol.owner.name.asString()
+
+        if (owner == "stateMachine") {
+            handleStateMachine(expression)
+        }
+    }
+
+
+    private fun handleStateMachine(call: IrCall) {
+        // stateMachine { ... }
+        val lambda = call.arguments.filterIsInstance<IrFunctionExpression>().firstOrNull()
+
+        val graphName = call.typeArguments.firstOrNull()?.render() ?: "StateMachine"
+        val graph = Graph(graphName)
+
+        logger?.report(CompilerMessageSeverity.INFO, "graphName ${graphName}")
+
+        lambda?.function?.body?.accept(
+            StateMachineDslVisitor(graph),
+            null
+        )
+
+        logger?.report(CompilerMessageSeverity.INFO, "graph $graph")
+
+        val file = File(outputDir, "stateMachine_${graph.name}.mmd")
+        val mermaidOut = MermaidWriter.toMermaid(graph)
+        logger?.report(CompilerMessageSeverity.INFO, "Mermaid: $mermaidOut")
+        file.writeText(mermaidOut)
+    }
+}
+
+/**
+ * Step 4:
+ * Traverse our DSL and extract entrance states, events, and target states.
+ */
+class StateMachineDslVisitor(
+    private val graph: Graph
+) : IrVisitorVoid() {
+
+    override fun visitElement(element: IrElement) {
+        element.acceptChildrenVoid(this)
+    }
+
+    private var currentState: String? = null
+    private var currentEvent: String? = null
+
+    private var targetState: String? = null
+
+    fun checkAddItems() {
+        if(currentState != null && currentEvent != null && targetState != null) {
+            graph.edges.add(
+                Edge(
+                    from = currentState ?: "UNKNOWN",
+                    to = targetState ?: "UNKNOWN",
+                    event = currentEvent ?: "UNKNOWN"
+                )
+            )
+        }
+    }
+
+    override fun visitCall(expression: IrCall) {
+
+        when (expression.symbol.owner.name.asString()) {
+
+            "state" -> {
+                // state<T> { ... }
+                val typeArg = expression.typeArguments.firstOrNull()
+                currentState = typeArg?.render()?.split(".")?.last() ?: "UnknownState"
+
+                logger?.report(CompilerMessageSeverity.INFO, "Adding state [$currentState]")
+                graph.states.add(currentState!!)
+            }
+
+            "on" -> {
+                // on<E>()
+                val typeArg = expression.typeArguments.firstOrNull()
+                currentEvent = typeArg?.classHierarchyName() ?: "UnknownEvent"
+                logger?.report(
+                    CompilerMessageSeverity.INFO,
+                    "Adding event [$currentEvent]"
+                )
+                checkAddItems()
+            }
+
+            "transitionTo" -> {
+
+                targetState = expression.arguments[1]?.type?.classHierarchyName()
+                    ?: "UnknownTarget"
+
+                logger?.report(
+                    CompilerMessageSeverity.INFO,
+                    "Adding transitionTo [$targetState]"
+                )
+            }
+            "transitionWith" -> {
+                targetState = expression.typeArguments.firstOrNull()?.classHierarchyName()
+                    ?: "UnknownTarget"
+
+                logger?.report(
+                    CompilerMessageSeverity.INFO,
+                    "Adding transitionWith  [$targetState]"
+                )
+            }
+        }
+
+        super.visitCall(expression)
+    }
+}
+
+/**
+ * Step 5:
+ * Write the mermaid file
+ */
+object MermaidWriter {
+
+    fun toMermaid(graph: Graph): String {
+        val sb = StringBuilder()
+        sb.appendLine("stateDiagram-v2")
+
+        for (edge in graph.edges) {
+            sb.appendLine("    ${edge.from} --> ${edge.to}: ${edge.event}")
+        }
+
+        return sb.toString()
+    }
+}
+
+/**
+ * Helper to get class name including hierarchy (e.g. AdventureState.Start) but excluding package.
+ */
+private fun IrType.classHierarchyName(): String {
+    val owner = (this as? IrSimpleType)?.classifierOrNull?.owner
+    if (owner !is IrDeclarationWithName) return this.render().split(".").last()
+
+    val names = mutableListOf<String>()
+    var current: Any? = owner
+    while (current is IrDeclarationWithName) {
+        names.add(0, current.name.asString())
+        val parent = (current as? IrDeclaration)?.parent
+        if (parent == null || parent is IrPackageFragment) break
+        current = parent
+    }
+    names.removeAt(0)
+    return names.joinToString(".")
+}
