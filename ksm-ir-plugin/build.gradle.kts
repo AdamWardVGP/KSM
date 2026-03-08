@@ -21,7 +21,10 @@ dependencies {
     compileOnly(libs.kotlin.compiler.embeddable)
     compileOnly(libs.kotlin.gradle.plugin.api)
 
-    testImplementation("coffee.adammakes.ksm:ksm:0.0.1-SNAPSHOT")
+    val ksmVersion = java.util.Properties().apply {
+        file("../gradle.properties").inputStream().use(::load)
+    }.getProperty("VERSION_NAME", "0.0.1-SNAPSHOT")
+    testImplementation("coffee.adammakes.ksm:ksm:$ksmVersion")
     testImplementation(kotlin("test-junit"))
     testImplementation(libs.kotlin.compile.testing)
     testImplementation(libs.kotlinx.coroutines.core)
