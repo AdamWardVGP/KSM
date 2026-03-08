@@ -5,12 +5,13 @@ This project follows [Semantic Versioning](https://semver.org/).
 ## Steps
 
 1. Update `VERSION_NAME` in `gradle.properties` to the new version (e.g. `0.1.0`).
-2. Update `CHANGELOG.md` — move items from `[Unreleased]` under a new heading:
+2. Update the `version` string in `ksm-ir-plugin/src/main/kotlin/coffee/adammakes/ksm/ir/KsmGradlePlugin.kt` to match.
+3. Update `CHANGELOG.md` — move items from `[Unreleased]` under a new heading:
    ```
    ## [0.1.0] — YYYY-MM-DD
    ```
-3. Commit: `git commit -m "Release 0.1.0"`
-4. Tag and push:
+4. Commit: `git commit -m "Release 0.1.0"`
+5. Tag and push:
    ```
    git tag v0.1.0
    git push origin main --tags

@@ -19,7 +19,7 @@ class KsmGradlePlugin : KotlinCompilerPluginSupportPlugin {
     override fun getPluginArtifact() = SubpluginArtifact(
         groupId = "coffee.adammakes.ksm",
         artifactId = "ksm-ir-plugin",
-        version = "0.1.0"
+        version = "0.0.1-alpha"
     )
 
     override fun applyToCompilation(kotlinCompilation: KotlinCompilation<*>): Provider<List<SubpluginOption>> {

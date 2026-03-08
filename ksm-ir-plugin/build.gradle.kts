@@ -7,7 +7,9 @@ plugins {
 }
 
 group = "coffee.adammakes.ksm"
-version = "0.1.0"
+version = Properties().apply {
+    file("../gradle.properties").inputStream().use { load(it) }
+}.getProperty("VERSION_NAME", "0.0.1-SNAPSHOT")
 
 gradlePlugin {
     plugins {
