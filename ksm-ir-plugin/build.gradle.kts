@@ -46,10 +46,6 @@ mavenPublishing {
     }
 }
 
-tasks.withType<Sign>().configureEach {
-    onlyIf { findProperty("signingInMemoryKey") != null }
-}
-
 //https://github.com/JetBrains/kotlin/blob/master/docs/fir/fir-basics.md
 dependencies {
     compileOnly(libs.kotlin.compiler.embeddable)

@@ -55,7 +55,3 @@ mavenPublishing {
     scm { url = "https://github.com/AdamWardVGP/KSM" }
   }
 }
-
-tasks.withType<Sign>().configureEach {
-  onlyIf { findProperty("signingInMemoryKey") != null }
-}
