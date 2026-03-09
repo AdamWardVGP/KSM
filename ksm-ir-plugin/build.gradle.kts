@@ -4,7 +4,6 @@ import java.util.Properties
 plugins {
     kotlin("jvm") version "2.3.0" // version required here; composite build can't use catalog for plugin versions
     `java-gradle-plugin`
-    `maven-publish`
     id("com.vanniktech.maven.publish") version "0.30.0"
 }
 
