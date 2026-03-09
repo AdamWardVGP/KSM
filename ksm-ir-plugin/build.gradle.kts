@@ -1,3 +1,4 @@
+import com.vanniktech.maven.publish.SonatypeHost
 import java.util.Properties
 
 plugins {
@@ -22,12 +23,13 @@ gradlePlugin {
 }
 
 mavenPublishing {
-    publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.CENTRAL_PORTAL)
+    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
     signAllPublications()
-    coordinates("coffee.adammakes.ksm", "ksm-ir-plugin")
+    coordinates(group.toString(), "ksm-ir-plugin", version.toString())
     pom {
         name = "KSM IR Plugin"
         description = "Kotlin IR compiler plugin for KSM — generates Mermaid state diagrams at compile time"
+        inceptionYear = "2026"
         url = "https://github.com/AdamWardVGP/KSM"
         licenses {
             license {

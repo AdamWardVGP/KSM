@@ -1,3 +1,5 @@
+import com.vanniktech.maven.publish.SonatypeHost
+
 plugins {
   kotlin("multiplatform")
   `maven-publish`
@@ -32,12 +34,13 @@ kotlin {
 }
 
 mavenPublishing {
-  publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.CENTRAL_PORTAL)
+  publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
   signAllPublications()
-  coordinates("coffee.adammakes.ksm", "ksm")
+    coordinates(group.toString(), "ksm", version.toString())
   pom {
     name = "KSM"
     description = "A finite state machine for Kotlin Multiplatform"
+    inceptionYear = "2026"
     url = "https://github.com/AdamWardVGP/KSM"
     licenses {
       license {
