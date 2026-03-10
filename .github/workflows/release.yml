@@ -20,8 +20,17 @@ jobs:
           java-version: '17'
 
       - name: Debug Signing
-        run: 'echo "Key length: ${#ORG_GRADLE_PROJECT_signingInMemoryKey}"'
+        run: | 
+         echo "${ORG_GRADLE_PROJECT_mavenCentralUsername}" | sha256sum
+         echo "${ORG_GRADLE_PROJECT_mavenCentralPassword}" | sha256sum
+         echo "${ORG_GRADLE_PROJECT_signingInMemoryKeyId}" | sha256sum
+         echo "${ORG_GRADLE_PROJECT_signingInMemoryKeyPassword}" | sha256sum
+         echo "${ORG_GRADLE_PROJECT_signingInMemoryKey}" | sha256sum
         env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_KEY_ID }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
           ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.GPG_KEY_CONTENTS }}
 
       - name: Publish to MavenCentral
