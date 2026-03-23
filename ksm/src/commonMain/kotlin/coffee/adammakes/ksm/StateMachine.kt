@@ -138,8 +138,8 @@ class StateMachineBuilder<State : Any, Event : Any> {
 
     inner class TransitionBuilder<EVENT : Event>(val event: KClass<EVENT>) {
 
-      inline fun <reified ToState : State> transitionWith(
-        noinline transform: (State, EVENT) -> State
+      inline infix fun <reified ToState : State> transitionWith(
+        noinline transform: (FromState, EVENT) -> ToState
       ) {
         transitions[event] =
           Transition(
@@ -147,7 +147,7 @@ class StateMachineBuilder<State : Any, Event : Any> {
             from = from,
             to = ToState::class,
             event = event,
-            reduce = { state, evt -> transform(state, evt as EVENT) },
+            reduce = { state, evt -> transform(state as FromState, evt as EVENT) },
           )
       }
 
