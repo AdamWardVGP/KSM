@@ -24,13 +24,13 @@ fun getAdventureStateMachine(
 
     state<AdventureState.OldBridge> {
       on<AdventureEvent.CrossBridge>() transitionTo AdventureState.Treasure
-      on<AdventureEvent.RunAway>().transitionWith<AdventureState.GameOver> { _, _ ->
+      on<AdventureEvent.RunAway>() transitionWith { _, _ ->
         AdventureState.GameOver("You lose your way and starve in the woods.")
       }
     }
 
     state<AdventureState.CaveEntrance> {
-      on<AdventureEvent.EnterCave>().transitionWith<AdventureState.FightMonster> { _, event ->
+      on<AdventureEvent.EnterCave>() transitionWith { _, event ->
         AdventureState.FightMonster(event.monsterName)
       }
 
@@ -39,7 +39,7 @@ fun getAdventureStateMachine(
 
     state<AdventureState.FightMonster> {
       on<AdventureEvent.Fight>() transitionTo AdventureState.Treasure
-      on<AdventureEvent.RunAway>().transitionWith<AdventureState.GameOver> { _, _ ->
+      on<AdventureEvent.RunAway>() transitionWith { _, _ ->
         AdventureState.GameOver("You try to get away but trip and are eaten by the monster.")
       }
     }
