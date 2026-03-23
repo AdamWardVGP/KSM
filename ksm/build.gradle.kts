@@ -33,7 +33,7 @@ kotlin {
 
 mavenPublishing {
   publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
-  signAllPublications()
+  if (System.getenv("SIGNING_KEY") != null) signAllPublications()
   coordinates(group.toString(), "ksm")
   pom {
     name = "KSM"
