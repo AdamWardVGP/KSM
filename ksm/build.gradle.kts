@@ -1,4 +1,5 @@
 import com.vanniktech.maven.publish.SonatypeHost
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
   kotlin("multiplatform")
@@ -11,7 +12,11 @@ version = rootProject.version
 repositories { mavenCentral() }
 
 kotlin {
-  jvm()
+  jvm {
+    compilerOptions {
+      jvmTarget.set(JvmTarget.JVM_11)
+    }
+  }
 
   sourceSets {
     val commonMain by getting {

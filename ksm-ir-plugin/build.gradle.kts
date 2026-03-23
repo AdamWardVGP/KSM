@@ -49,6 +49,7 @@ mavenPublishing {
 //https://github.com/JetBrains/kotlin/blob/master/docs/fir/fir-basics.md
 dependencies {
     compileOnly(libs.kotlin.compiler.embeddable)
+    compileOnly(libs.kotlin.gradle.plugin)
     compileOnly(libs.kotlin.gradle.plugin.api)
 
     val ksmVersion = Properties().apply {
@@ -64,6 +65,15 @@ kotlin {
     jvmToolchain(21)
 }
 
+tasks.named<ProcessResources>("processResources") {
+    filesMatching("version.properties") {
+        filter(
+            org.apache.tools.ant.filters.ReplaceTokens::class,
+            "tokens" to mapOf("VERSION" to version.toString()),
+        )
+    }
+}
+
 tasks.withType<Test>().configureEach {
     testLogging {
         showStandardStreams = true
@@ -71,17 +81,18 @@ tasks.withType<Test>().configureEach {
     }
 }
 
-// JDK 21 toolchain is used for compilation, but we target JVM 17 bytecode so the
-// plugin JAR is loadable by a JVM 17 Gradle daemon. Must be set on both Kotlin and Java tasks.
+// JDK 21 toolchain is used for compilation, but we target JVM 11 bytecode so the
+// plugin JAR is loadable by any JVM 11+ Gradle daemon (Gradle 8 minimum is JDK 11).
+// Must be set on both Kotlin and Java tasks.
 tasks.withType<JavaCompile>().configureEach {
-    sourceCompatibility = "17"
-    targetCompatibility = "17"
+    sourceCompatibility = "11"
+    targetCompatibility = "11"
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
     compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-        apiVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_3) // kept in sync with libs.versions.toml kotlin = "2.3.0"
-        languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_3)
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+        apiVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0)
+        languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0)
     }
 }
