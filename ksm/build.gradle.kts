@@ -6,6 +6,7 @@ plugins {
 }
 
 group = "coffee.adammakes.ksm"
+
 version = rootProject.version
 
 repositories { mavenCentral() }
