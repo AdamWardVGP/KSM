@@ -23,7 +23,7 @@ gradlePlugin {
 
 mavenPublishing {
     publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
-    signAllPublications()
+    if (System.getenv("SIGNING_KEY") != null) signAllPublications()
     coordinates(group.toString(), "ksm-ir-plugin", version.toString())
     pom {
         name = "KSM IR Plugin"
