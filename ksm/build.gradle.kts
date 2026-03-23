@@ -7,16 +7,13 @@ plugins {
 }
 
 group = "coffee.adammakes.ksm"
+
 version = rootProject.version
 
 repositories { mavenCentral() }
 
 kotlin {
-  jvm {
-    compilerOptions {
-      jvmTarget.set(JvmTarget.JVM_11)
-    }
-  }
+  jvm { compilerOptions { jvmTarget.set(JvmTarget.JVM_11) } }
 
   sourceSets {
     val commonMain by getting {
