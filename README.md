@@ -22,7 +22,7 @@ The state machine itself is:
 - 🪶 Lightweight: dispatch uses `KClass` references, no annotation processing or code generation required
 - ➡️ Deterministic: In a given state one event → one transition
 - ⛔ Non-reentrant: events are processed serially
-- 👻 Side effects are explicitly outside the FSM
+- 👻 Side effects are run explicitly outside the FSM
 
 ---
 
@@ -53,6 +53,10 @@ val appLaunchStateMachine = stateMachine<AppStates, AppEvents> {
     }
 
     state<AppStates.Login.CredentialsPrompt> {
+        //SideEffects run on the coroutines scope when a state is entered/exited
+        onEnter { prompt -> analytics.logScreen(prompt::class.simpleName.orEmpty()) }
+        onExit { analytics.log("leaving login") }
+
         on<AppEvents.LoginSuccess>() transitionTo AppStates.GoToMain
         //Events can carry payloads and pass them into new states via transitionWith
         on<AppEvents.LoginFailed>() transitionWith { _, event -> AppStates.Login.Failed(event.reason) }
@@ -72,9 +76,12 @@ appLaunchStateMachine.dispatchEvent(EulaOutOfDate)
 
 ## Guidelines
 
-The state machine itself should not be performing work internally and is intended to function purely as a mapper `(CurrentState, Event) -> ResultState`.
+Transition reducers should stay pure and are intended to function as a mapper
+`(CurrentState, Event) -> ResultState`.
 
-> ⚠️ I/O, network calls, persistence should be triggered in response to a state transition, and not inside the state machine itself.
+Use `onEnter` and `onExit` for explicit state lifecycle work. Those hooks launch on
+`dispatchedOn`, so they can trigger I/O, analytics, persistence, or follow-up event dispatches
+without blocking the transition itself.
 
 ---
 

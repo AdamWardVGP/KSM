@@ -8,6 +8,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -96,5 +97,36 @@ class AppStartStateMachineTest {
       }
 
       testScope.backgroundScope.cancel()
+    }
+
+  @Test
+  fun `state hooks run for initial state and transitions`() =
+    testScope.runTest {
+      val enteredStates = Channel<AppStates>(Channel.UNLIMITED)
+      val exitedStates = Channel<AppStates>(Channel.UNLIMITED)
+
+      val fsm =
+        stateMachine<AppStates, AppEvents> {
+          initialState = Uninitialized
+          dispatchedOn = backgroundScope
+
+          state<Uninitialized> {
+            onEnter { enteredStates.send(it) }
+            onExit { exitedStates.send(it) }
+            on<EulaAccepted>() transitionTo Login.CredentialsPrompt
+          }
+
+          state<Login> { onEnter { enteredStates.send(it) } }
+        }
+
+      assertEquals(Uninitialized, enteredStates.receive())
+      assertTrue(exitedStates.tryReceive().isFailure)
+
+      fsm.dispatchEvent(EulaAccepted)
+
+      assertEquals(Uninitialized, exitedStates.receive())
+      assertEquals(Login.CredentialsPrompt, enteredStates.receive())
+
+      backgroundScope.cancel()
     }
 }
