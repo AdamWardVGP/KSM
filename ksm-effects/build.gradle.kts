@@ -1,8 +1,6 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
-plugins {
-  kotlin("multiplatform")
-}
+plugins { kotlin("multiplatform") }
 
 group = "coffee.adammakes.ksm"
 

@@ -9,9 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.3-alpha] — 2026-06-15
 
-### Added
-- `onEnter` and `onExit` state lifecycle hooks that launch work on the configured `dispatchedOn` scope
-
 ### Changed
 - Android sample `minSdk` raised to 23
 

@@ -4,14 +4,11 @@ import app.cash.turbine.test
 import coffee.adammakes.ksm.stateMachine
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -37,9 +34,7 @@ class EffectedStateMachineTest {
 
   data object WorkDone : Event
 
-  data object WorkCancelled : Event
-
-  private fun machine(scope: kotlinx.coroutines.CoroutineScope) =
+  private fun machine(scope: CoroutineScope) =
     stateMachine<State, Event> {
       initialState = Idle
       dispatchedOn = scope
@@ -49,7 +44,6 @@ class EffectedStateMachineTest {
       state<Active> {
         on<Deactivate>() transitionTo Idle
         on<WorkDone>() transitionTo Idle
-        on<WorkCancelled>() transitionTo Idle
       }
     }
 
@@ -57,20 +51,13 @@ class EffectedStateMachineTest {
   fun `effect result is dispatched to machine`() =
     testScope.runTest {
       val fsm = machine(backgroundScope)
-      val effected =
-        fsm.withEffects(backgroundScope) { state ->
-          when (state) {
-            is Active -> listOf(Effect(body = { WorkDone }))
-            else -> emptyList()
-          }
-        }
+      val effected = fsm.withEffects(backgroundScope) { onEnter<Active>() effect { WorkDone } }
 
       effected.currentState.test {
         assertEquals(Idle, awaitItem())
 
         effected.dispatchEvent(Activate)
         assertEquals(Active, awaitItem())
-        // Effect runs immediately and dispatches WorkDone → machine transitions back
         assertEquals(Idle, awaitItem())
 
         cancelAndIgnoreRemainingEvents()
@@ -80,91 +67,33 @@ class EffectedStateMachineTest {
     }
 
   @Test
-  fun `cancel path executes when state scope is cancelled`() =
+  fun `multiple effects all run for a state`() =
     testScope.runTest {
-      var cancelCalled = false
+      var firstCalled = false
+      var secondCalled = false
       val scope = CoroutineScope(coroutineContext + SupervisorJob())
 
       val fsm = machine(scope)
-
       val effected =
-        fsm.withEffects(scope) { state ->
-          when (state) {
-            is Active ->
-              listOf(
-                Effect(
-                  body = { CompletableDeferred<Event>().await() },
-                  onCancel = {
-                    cancelCalled = true
-                    WorkCancelled
-                  },
-                )
-              )
-            else -> emptyList()
-          }
+        fsm.withEffects(scope) {
+          onEnter<Active>() effect
+            { _ ->
+              firstCalled = true
+              CompletableDeferred<Event>().await()
+            } and
+            { _ ->
+              secondCalled = true
+              CompletableDeferred<Event>().await()
+            }
         }
 
       effected.dispatchEvent(Activate)
       advanceUntilIdle()
 
-      effected.dispatchEvent(Deactivate)
-      advanceUntilIdle()
-
-      assertEquals(true, cancelCalled)
+      assertEquals(true, firstCalled)
+      assertEquals(true, secondCalled)
 
       scope.cancel()
-    }
-
-  @Test
-  fun `diagnostic - invokeOnCompletion fires when scope cancelled`() =
-    testScope.runTest {
-      var cancelHandlerFired = false
-
-      val effectScope = CoroutineScope(coroutineContext + SupervisorJob())
-
-      val job = effectScope.launch { CompletableDeferred<Event>().await() }
-      job.invokeOnCompletion { cause ->
-        if (cause is CancellationException) cancelHandlerFired = true
-      }
-
-      runCurrent() // let effectCoroutine start and suspend at await()
-
-      effectScope.cancel()
-      runCurrent() // process cancellation
-
-      assertEquals(true, cancelHandlerFired, "invokeOnCompletion cancel handler did not fire")
-    }
-
-  @Test
-  fun `cancel path pushes event into machine`() =
-    testScope.runTest {
-      val fsm = machine(backgroundScope)
-      val neverCompletes = CompletableDeferred<Event>()
-
-      val effected =
-        fsm.withEffects(backgroundScope) { state ->
-          when (state) {
-            is Active ->
-              listOf(Effect(body = { neverCompletes.await() }, onCancel = { WorkCancelled }))
-            else -> emptyList()
-          }
-        }
-
-      effected.currentState.test {
-        assertEquals(Idle, awaitItem())
-
-        effected.dispatchEvent(Activate)
-        assertEquals(Active, awaitItem())
-
-        // Deactivate cancels the effect scope; onCancel pushes WorkCancelled → Idle
-        effected.dispatchEvent(Deactivate)
-        // Either the explicit Deactivate or the pushed WorkCancelled lands Idle
-        assertEquals(Idle, awaitItem())
-
-        cancelAndIgnoreRemainingEvents()
-      }
-
-      backgroundScope.cancel()
     }
 
   @Test
@@ -174,17 +103,54 @@ class EffectedStateMachineTest {
 
       val fsm = machine(backgroundScope)
       val effected =
-        fsm.withEffects(backgroundScope) { state ->
-          when (state) {
-            is Active -> listOf(Effect(body = { effectCalled = true; WorkDone }))
-            else -> emptyList()
-          }
+        fsm.withEffects(backgroundScope) {
+          onEnter<Active>() effect
+            {
+              effectCalled = true
+              WorkDone
+            }
         }
 
-      // Idle → no effects
+      // stays Idle — no effects registered for Idle
       advanceUntilIdle()
       assertEquals(false, effectCalled)
 
       backgroundScope.cancel()
+    }
+
+  @Test
+  fun `previous state effects cancelled on transition`() =
+    testScope.runTest {
+      val scope = CoroutineScope(coroutineContext + SupervisorJob())
+      val neverCompletes = CompletableDeferred<Event>()
+      var effectStarted = false
+
+      val fsm = machine(scope)
+      val effected =
+        fsm.withEffects(scope) {
+          onEnter<Active>() effect
+            { _ ->
+              effectStarted = true
+              neverCompletes.await()
+            }
+        }
+
+      effected.currentState.test {
+        assertEquals(Idle, awaitItem())
+
+        effected.dispatchEvent(Activate)
+        assertEquals(Active, awaitItem())
+
+        advanceUntilIdle()
+        assertEquals(true, effectStarted)
+
+        // Deactivate cancels the Active stateJob
+        effected.dispatchEvent(Deactivate)
+        assertEquals(Idle, awaitItem())
+
+        cancelAndIgnoreRemainingEvents()
+      }
+
+      scope.cancel()
     }
 }

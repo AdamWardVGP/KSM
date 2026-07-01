@@ -7,17 +7,14 @@ import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.ir.IrElement
-import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrDeclaration
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationWithName
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.declarations.IrPackageFragment
 import org.jetbrains.kotlin.ir.expressions.IrCall
-import org.jetbrains.kotlin.ir.expressions.IrConstructorCall
+import org.jetbrains.kotlin.ir.expressions.IrClassReference
 import org.jetbrains.kotlin.ir.expressions.IrFunctionExpression
 import org.jetbrains.kotlin.ir.expressions.IrFunctionReference
-import org.jetbrains.kotlin.ir.expressions.IrTypeOperator
-import org.jetbrains.kotlin.ir.expressions.IrTypeOperatorCall
 import org.jetbrains.kotlin.ir.types.IrSimpleType
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.classifierOrNull
@@ -139,32 +136,32 @@ class EffectContributorDslVisitor(private val graph: Graph) : IrVisitorVoid() {
     private var currentState: String? = null
 
     override fun visitElement(element: IrElement) {
-        if (element is IrTypeOperatorCall && element.operator == IrTypeOperator.INSTANCEOF) {
-            currentState = element.typeOperand.classHierarchyName()
-            logger?.report(
-                CompilerMessageSeverity.INFO,
-                "KSM effects: is-check for state [$currentState]",
-            )
-        }
         element.acceptChildrenVoid(this)
     }
 
-    override fun visitConstructorCall(expression: IrConstructorCall) {
-        val parentClass = expression.symbol.owner.parent as? IrClass
-        if (parentClass?.name?.asString() == "Effect") {
+    // onEnter<S>() is inline/reified; after inlining the IR contains OnEnterScope(S::class, ...)
+    // The S::class literal appears as an IrClassReference, which we use to track the current state.
+    override fun visitClassReference(expression: IrClassReference) {
+        val name = expression.classType.classHierarchyName()
+        currentState = name
+        logger?.report(CompilerMessageSeverity.INFO, "KSM effects: onEnter DSL entry [$name]")
+        super.visitClassReference(expression)
+    }
+
+    override fun visitCall(expression: IrCall) {
+        val fnName = expression.symbol.owner.name.asString()
+        if (fnName == "effect" || fnName == "and") {
             val state = currentState ?: "UnknownState"
-            val bodyArg = expression.arguments.getOrNull(0)
+            val bodyArg = expression.arguments.lastOrNull()
             val effectName =
                 (bodyArg as? IrFunctionReference)?.symbol?.owner?.name?.asString() ?: "λ"
-            val cancelArg = expression.arguments.getOrNull(1)
-            val hasCancel = cancelArg is IrFunctionExpression || cancelArg is IrFunctionReference
             logger?.report(
                 CompilerMessageSeverity.INFO,
-                "KSM effects: Effect[$effectName, cancel=$hasCancel] for state [$state]",
+                "KSM effects: effect[$effectName] for state [$state]",
             )
-            graph.effects.getOrPut(state) { mutableListOf() }.add(StateEffect(effectName, hasCancel))
+            graph.effects.getOrPut(state) { mutableListOf() }.add(StateEffect(effectName, false))
         }
-        super.visitConstructorCall(expression)
+        super.visitCall(expression)
     }
 }
 

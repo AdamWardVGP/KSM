@@ -40,12 +40,7 @@ spotless {
     ktfmt(libs.versions.ktfmt.get()).googleStyle()
   }
   kotlinGradle {
-    target(
-      "*.gradle.kts",
-      "ksm/*.gradle.kts",
-      "ksm-effects/*.gradle.kts",
-      "sample/*.gradle.kts",
-    )
+    target("*.gradle.kts", "ksm/*.gradle.kts", "ksm-effects/*.gradle.kts", "sample/*.gradle.kts")
     ktfmt(libs.versions.ktfmt.get()).googleStyle()
   }
 }
