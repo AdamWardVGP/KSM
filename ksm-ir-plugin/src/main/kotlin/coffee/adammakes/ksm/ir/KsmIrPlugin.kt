@@ -2,16 +2,22 @@ package coffee.adammakes.ksm.ir
 
 import coffee.adammakes.ksm.ir.model.Edge
 import coffee.adammakes.ksm.ir.model.Graph
+import coffee.adammakes.ksm.ir.model.StateEffect
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.ir.IrElement
+import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrDeclaration
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationWithName
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.declarations.IrPackageFragment
 import org.jetbrains.kotlin.ir.expressions.IrCall
+import org.jetbrains.kotlin.ir.expressions.IrConstructorCall
 import org.jetbrains.kotlin.ir.expressions.IrFunctionExpression
+import org.jetbrains.kotlin.ir.expressions.IrFunctionReference
+import org.jetbrains.kotlin.ir.expressions.IrTypeOperator
+import org.jetbrains.kotlin.ir.expressions.IrTypeOperatorCall
 import org.jetbrains.kotlin.ir.types.IrSimpleType
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.classifierOrNull
@@ -20,87 +26,65 @@ import org.jetbrains.kotlin.ir.visitors.IrVisitorVoid
 import org.jetbrains.kotlin.ir.visitors.acceptChildrenVoid
 import java.io.File
 
-
 /**
  * Step 2:
  * Implement our IrGenerationExtension which searches files and calls our visitor.
  */
-class KsmIrGenerationExtension(private val outputDir: String?) : IrGenerationExtension {
-    override fun generate(
-        moduleFragment: IrModuleFragment,
-        pluginContext: IrPluginContext
-    ) {
-        moduleFragment.files.forEach { file ->
-            file.accept(
-                KsmIrVisitor(pluginContext, outputDir),
-                null
-            )
+class KsmIrGenerationExtension(private val outputDirPath: String?) : IrGenerationExtension {
+    override fun generate(moduleFragment: IrModuleFragment, pluginContext: IrPluginContext) {
+        val graphs = mutableMapOf<String, Graph>()
+        val visitor = KsmIrVisitor(pluginContext, graphs)
+        moduleFragment.files.forEach { file -> file.accept(visitor, null) }
+
+        val outputDir =
+            outputDirPath?.let { File(it) } ?: File(System.getProperty("user.home"), "ksmGraphs")
+        outputDir.mkdirs()
+
+        graphs.values.forEach { graph ->
+            val file = File(outputDir, "stateMachine_${graph.name}.mmd")
+            val mermaidOut = MermaidWriter.toMermaid(graph)
+            logger?.report(CompilerMessageSeverity.INFO, "Mermaid output:\n$mermaidOut")
+            file.writeText(mermaidOut)
         }
     }
 }
 
-/**
- * Step 3:
- * Inspect calls looking for methods named "stateMachine".
- *
- * Step 5:
- * Once it's been processed output the mermaid writer
- */
 class KsmIrVisitor(
     private val context: IrPluginContext,
-    private val outputDirPath: String?
+    private val graphs: MutableMap<String, Graph>,
 ) : IrVisitorVoid() {
 
     override fun visitElement(element: IrElement) {
         element.acceptChildrenVoid(this)
     }
 
-    private val outputDir: File by lazy {
-        val dir = outputDirPath?.let { File(it) } ?: File(System.getProperty("user.home"), "ksmGraphs")
-        dir.apply { mkdirs() }
-    }
-
     override fun visitCall(expression: IrCall) {
         super.visitCall(expression)
-
-        val owner = expression.symbol.owner.name.asString()
-
-        if (owner == "stateMachine") {
-            handleStateMachine(expression)
+        when (expression.symbol.owner.name.asString()) {
+            "stateMachine" -> handleStateMachine(expression)
+            "withEffects" -> handleWithEffects(expression)
         }
     }
 
-
     private fun handleStateMachine(call: IrCall) {
-        // stateMachine { ... }
+        val fqn = call.typeArguments.firstOrNull()?.render() ?: return
+        val graph = Graph(fqn.split(".").last())
+        graphs[fqn] = graph
+        logger?.report(CompilerMessageSeverity.INFO, "KSM: found stateMachine for $fqn")
         val lambda = call.arguments.filterIsInstance<IrFunctionExpression>().firstOrNull()
+        lambda?.function?.body?.accept(StateMachineDslVisitor(graph), null)
+    }
 
-        val graphName = call.typeArguments.firstOrNull()?.render() ?: "StateMachine"
-        val graph = Graph(graphName)
-
-        logger?.report(CompilerMessageSeverity.INFO, "graphName ${graphName}")
-
-        lambda?.function?.body?.accept(
-            StateMachineDslVisitor(graph),
-            null
-        )
-
-        logger?.report(CompilerMessageSeverity.INFO, "graph $graph")
-
-        val file = File(outputDir, "stateMachine_${graph.name}.mmd")
-        val mermaidOut = MermaidWriter.toMermaid(graph)
-        logger?.report(CompilerMessageSeverity.INFO, "Mermaid: $mermaidOut")
-        file.writeText(mermaidOut)
+    private fun handleWithEffects(call: IrCall) {
+        val fqn = call.typeArguments.firstOrNull()?.render() ?: return
+        val graph = graphs[fqn] ?: return
+        logger?.report(CompilerMessageSeverity.INFO, "KSM: found withEffects for $fqn")
+        val lambda = call.arguments.filterIsInstance<IrFunctionExpression>().firstOrNull()
+        lambda?.function?.body?.accept(EffectContributorDslVisitor(graph), null)
     }
 }
 
-/**
- * Step 4:
- * Traverse our DSL and extract entrance states, events, and target states.
- */
-class StateMachineDslVisitor(
-    private val graph: Graph
-) : IrVisitorVoid() {
+class StateMachineDslVisitor(private val graph: Graph) : IrVisitorVoid() {
 
     override fun visitElement(element: IrElement) {
         element.acceptChildrenVoid(this)
@@ -108,74 +92,82 @@ class StateMachineDslVisitor(
 
     private var currentState: String? = null
     private var currentEvent: String? = null
-
     private var targetState: String? = null
 
-    fun checkAddItems() {
-        if(currentState != null && currentEvent != null && targetState != null) {
+    private fun checkAddItems() {
+        if (currentState != null && currentEvent != null && targetState != null) {
             graph.edges.add(
                 Edge(
                     from = currentState ?: "UNKNOWN",
                     to = targetState ?: "UNKNOWN",
-                    event = currentEvent ?: "UNKNOWN"
+                    event = currentEvent ?: "UNKNOWN",
                 )
             )
         }
     }
 
     override fun visitCall(expression: IrCall) {
-
         when (expression.symbol.owner.name.asString()) {
-
             "state" -> {
-                // state<T> { ... }
                 val typeArg = expression.typeArguments.firstOrNull()
-                currentState = typeArg?.render()?.split(".")?.last() ?: "UnknownState"
-
-                logger?.report(CompilerMessageSeverity.INFO, "Adding state [$currentState]")
+                currentState = typeArg?.classHierarchyName() ?: "UnknownState"
+                logger?.report(CompilerMessageSeverity.INFO, "KSM: state [$currentState]")
                 graph.states.add(currentState!!)
             }
-
             "on" -> {
-                // on<E>()
                 val typeArg = expression.typeArguments.firstOrNull()
                 currentEvent = typeArg?.classHierarchyName() ?: "UnknownEvent"
-                logger?.report(
-                    CompilerMessageSeverity.INFO,
-                    "Adding event [$currentEvent]"
-                )
+                logger?.report(CompilerMessageSeverity.INFO, "KSM: event [$currentEvent]")
                 checkAddItems()
             }
-
             "transitionTo" -> {
-
-                targetState = expression.arguments[1]?.type?.classHierarchyName()
-                    ?: "UnknownTarget"
-
-                logger?.report(
-                    CompilerMessageSeverity.INFO,
-                    "Adding transitionTo [$targetState]"
-                )
+                targetState = expression.arguments[1]?.type?.classHierarchyName() ?: "UnknownTarget"
+                logger?.report(CompilerMessageSeverity.INFO, "KSM: transitionTo [$targetState]")
             }
             "transitionWith" -> {
-                targetState = expression.typeArguments.firstOrNull()?.classHierarchyName()
-                    ?: "UnknownTarget"
-
-                logger?.report(
-                    CompilerMessageSeverity.INFO,
-                    "Adding transitionWith  [$targetState]"
-                )
+                targetState =
+                    expression.typeArguments.firstOrNull()?.classHierarchyName() ?: "UnknownTarget"
+                logger?.report(CompilerMessageSeverity.INFO, "KSM: transitionWith [$targetState]")
             }
         }
-
         super.visitCall(expression)
     }
 }
 
-/**
- * Step 5:
- * Write the mermaid file
- */
+class EffectContributorDslVisitor(private val graph: Graph) : IrVisitorVoid() {
+
+    private var currentState: String? = null
+
+    override fun visitElement(element: IrElement) {
+        if (element is IrTypeOperatorCall && element.operator == IrTypeOperator.INSTANCEOF) {
+            currentState = element.typeOperand.classHierarchyName()
+            logger?.report(
+                CompilerMessageSeverity.INFO,
+                "KSM effects: is-check for state [$currentState]",
+            )
+        }
+        element.acceptChildrenVoid(this)
+    }
+
+    override fun visitConstructorCall(expression: IrConstructorCall) {
+        val parentClass = expression.symbol.owner.parent as? IrClass
+        if (parentClass?.name?.asString() == "Effect") {
+            val state = currentState ?: "UnknownState"
+            val bodyArg = expression.arguments.getOrNull(0)
+            val effectName =
+                (bodyArg as? IrFunctionReference)?.symbol?.owner?.name?.asString() ?: "λ"
+            val cancelArg = expression.arguments.getOrNull(1)
+            val hasCancel = cancelArg is IrFunctionExpression || cancelArg is IrFunctionReference
+            logger?.report(
+                CompilerMessageSeverity.INFO,
+                "KSM effects: Effect[$effectName, cancel=$hasCancel] for state [$state]",
+            )
+            graph.effects.getOrPut(state) { mutableListOf() }.add(StateEffect(effectName, hasCancel))
+        }
+        super.visitConstructorCall(expression)
+    }
+}
+
 object MermaidWriter {
 
     fun toMermaid(graph: Graph): String {
@@ -186,12 +178,27 @@ object MermaidWriter {
             sb.appendLine("    ${edge.from} --> ${edge.to}: ${edge.event}")
         }
 
+        for ((state, effects) in graph.effects) {
+            sb.appendLine("    note right of $state")
+            for (effect in effects) {
+                val cancelStr = if (effect.hasCancel) " ↩" else ""
+                sb.appendLine("        ${effect.name}$cancelStr")
+            }
+            sb.appendLine("    end note")
+        }
+
         return sb.toString()
     }
 }
 
 /**
- * Helper to get class name including hierarchy (e.g. AdventureState.Start) but excluding package.
+ * Returns the class name including hierarchy within its containing class, but excluding the
+ * package and top-level sealed class name. Nested separators use · (U+00B7) instead of . so
+ * the result is valid as a Mermaid state identifier.
+ *
+ * Examples (assuming top-level sealed class is stripped):
+ *   AdventureState.Start        → "Start"
+ *   GameState.Combat.Fighting   → "Combat·Fighting"
  */
 private fun IrType.classHierarchyName(): String {
     val owner = (this as? IrSimpleType)?.classifierOrNull?.owner
@@ -206,5 +213,5 @@ private fun IrType.classHierarchyName(): String {
         current = parent
     }
     names.removeAt(0)
-    return names.joinToString(".")
+    return names.joinToString("·")
 }
