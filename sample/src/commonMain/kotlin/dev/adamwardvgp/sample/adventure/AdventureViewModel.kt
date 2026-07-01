@@ -3,12 +3,18 @@ package dev.adamwardvgp.sample.adventure
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import coffee.adammakes.ksm.effects.withEffects
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
 interface AdventureViewModel {
   val adventureState: StateFlow<AdventureState>
+  val emojiRain: SharedFlow<String>
 
   fun dispatchEvent(event: AdventureEvent)
 }
@@ -21,21 +27,48 @@ class AdventureViewModelImpl(private val savedStateHandle: SavedStateHandle) :
       runCatching { Json.decodeFromString<AdventureState>(it) }.getOrNull()
     }
 
-  private val stateMachine =
+  private val _emojiRain = MutableSharedFlow<String>(extraBufferCapacity = 64)
+  override val emojiRain: SharedFlow<String> = _emojiRain
+
+  private val machine =
     getAdventureStateMachine(viewModelScope, restoredState ?: AdventureState.Start)
 
-  override val adventureState = stateMachine.currentState
+  private val effectedMachine =
+    machine.withEffects(viewModelScope) {
+      onEnter<AdventureState.Treasure>() effect ::rainCoins
+      onEnter<AdventureState.GameOver>() effect ::rainSkulls
+    }
+
+  override val adventureState = effectedMachine.currentState
 
   init {
     viewModelScope.launch {
-      stateMachine.currentState.collect { state ->
+      machine.currentState.collect { state ->
         savedStateHandle[KEY_STATE] = Json.encodeToString(state)
       }
     }
   }
 
-  override fun dispatchEvent(event: AdventureEvent) {
-    stateMachine.dispatchEvent(event)
+  override fun dispatchEvent(event: AdventureEvent) = effectedMachine.dispatchEvent(event)
+
+  private suspend fun rainCoins(
+    @Suppress("UNUSED_PARAMETER") state: AdventureState.Treasure
+  ): AdventureEvent {
+    repeat(30) {
+      _emojiRain.emit("🪙")
+      delay(120)
+    }
+    awaitCancellation()
+  }
+
+  private suspend fun rainSkulls(
+    @Suppress("UNUSED_PARAMETER") state: AdventureState.GameOver
+  ): AdventureEvent {
+    repeat(20) {
+      _emojiRain.emit("💀")
+      delay(150)
+    }
+    awaitCancellation()
   }
 
   companion object {
