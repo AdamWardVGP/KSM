@@ -278,7 +278,7 @@ stateMachine {
     initialState = State.Idle
     dispatchedOn = viewModelScope
 
-    state<AppStates.Idle> {
+    state<State.Idle> {
         on<Submitted>() transitionWith { _, event -> State.Loading(event.name) }
     }
     
@@ -298,11 +298,11 @@ The load is a side effect, it reads the local directory to find what the result 
 back to the state machine.
 
 ```kotlin
-    greetingStateMachine.withEffects() {
-        onEnter<State.Loading>() effect {
-            val id = runCatching { fetchId(it.name) }.getOrNull()
-            return if (id != null) IdFetched(id)
-                else FetchFailed("Unknown user")
+    greetingStateMachine.withEffects(viewModelScope) {
+        onEnter<State.Loading>() effect { state ->
+            val id = runCatching { fetchId(state.name) }.getOrNull()
+            if (id != null) IdFetched(id)
+            else FetchFailed("Unknown user")
         }
     }
 ```
@@ -332,23 +332,29 @@ the authority.
 if you want to think about it with vanilla Kotlin APIs and not the KSM DSL:
 
 ```kotlin
-fun transition(state: State, event: Event): State {
-    when(state) {
-        State.Idle        -> when(event) { is Submitted -> State.Loading(event.name) }
-        is State.Loading  -> when(event) { 
-            is IdFetched -> State.Greeted(event.id) 
-            is FetchFailed -> State.Failed(event.message) 
-        }
-        is State.Failed   -> when(event) { is Submitted -> State.Loading(event.name) }
+fun transition(state: State, event: Event): State = when (state) {
+    State.Idle       -> when (event) {
+        is Submitted -> State.Loading(event.name)
+        else -> state
     }
+    is State.Loading -> when (event) {
+        is IdFetched   -> State.Greeted(state.name, event.id)
+        is FetchFailed -> State.Failed(state.name, event.message)
+        else -> state
+    }
+    is State.Failed  -> when (event) {
+        is Submitted -> State.Loading(event.name)
+        else -> state
+    }
+    is State.Greeted -> state
 }
 
-fun runSideEffect(state: State): Event {
-    if(state == State.Loading) {
-        val id = runCatching { fetchId(it.name) }.getOrNull()
-        return if (id != null) IdFetched(it.name, id)
-        else FetchFailed(it.name, "Unknown user")
+suspend fun runSideEffect(state: State): Event? {
+    if (state is State.Loading) {
+        val id = runCatching { fetchId(state.name) }.getOrNull()
+        return if (id != null) IdFetched(id) else FetchFailed("Unknown user")
     }
+    return null
 }
 
 // some glue into a flow:
@@ -359,12 +365,12 @@ fun dispatch(event: Event) {
     events.trySend(event)
 }
 
-//in some scope
+// in some scope — process events
 events.receiveAsFlow().collect { event ->
-    state.value = transition(state, event)
+    state.value = transition(state.value, event)
 }
 
-//and in another scope
+// in another scope — run side effects
 state.collect { state ->
     val event = runSideEffect(state)
     if (event != null) dispatch(event)
