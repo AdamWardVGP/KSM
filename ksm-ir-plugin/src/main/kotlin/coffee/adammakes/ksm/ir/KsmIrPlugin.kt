@@ -26,7 +26,10 @@ import java.io.File
  * Step 2:
  * Implement our IrGenerationExtension which searches files and calls our visitor.
  */
-class KsmIrGenerationExtension(private val outputDirPath: String?) : IrGenerationExtension {
+class KsmIrGenerationExtension(
+    private val outputDirPath: String?,
+    private val outputFormat: String = "mmd",
+) : IrGenerationExtension {
     override fun generate(moduleFragment: IrModuleFragment, pluginContext: IrPluginContext) {
         val graphs = mutableMapOf<String, Graph>()
         val visitor = KsmIrVisitor(pluginContext, graphs)
@@ -37,7 +40,7 @@ class KsmIrGenerationExtension(private val outputDirPath: String?) : IrGeneratio
         outputDir.mkdirs()
 
         graphs.values.forEach { graph ->
-            val file = File(outputDir, "stateMachine_${graph.name}.mmd")
+            val file = File(outputDir, "stateMachine_${graph.name}.$outputFormat")
             val mermaidOut = MermaidWriter.toMermaid(graph)
             logger?.report(CompilerMessageSeverity.INFO, "Mermaid output:\n$mermaidOut")
             file.writeText(mermaidOut)
@@ -193,12 +196,11 @@ object MermaidWriter {
 
 /**
  * Returns the class name including hierarchy within its containing class, but excluding the
- * package and top-level sealed class name. Nested separators use · (U+00B7) instead of . so
- * the result is valid as a Mermaid state identifier.
+ * package and top-level sealed class name. Nested separators use . to show hierarchy.
  *
  * Examples (assuming top-level sealed class is stripped):
  *   AdventureState.Start        → "Start"
- *   GameState.Combat.Fighting   → "Combat·Fighting"
+ *   GameState.Combat.Fighting   → "Combat.Fighting"
  */
 private fun IrType.classHierarchyName(): String {
     val owner = (this as? IrSimpleType)?.classifierOrNull?.owner
@@ -213,5 +215,5 @@ private fun IrType.classHierarchyName(): String {
         current = parent
     }
     names.removeAt(0)
-    return names.joinToString("·")
+    return names.joinToString(".")
 }
