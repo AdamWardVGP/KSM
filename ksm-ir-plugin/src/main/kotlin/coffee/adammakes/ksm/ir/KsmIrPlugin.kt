@@ -186,7 +186,7 @@ object MermaidWriter {
             sb.appendLine("    note right of $state")
             for (effect in effects) {
                 val cancelStr = if (effect.hasCancel) " ↩" else ""
-                sb.appendLine("        ${effect.name}$cancelStr")
+                sb.appendLine("        ${effect.name}﹙﹚$cancelStr")
             }
             sb.appendLine("    end note")
         }

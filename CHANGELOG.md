@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Effect/action names in generated Mermaid notes now suffixed with `﹙﹚` (fullwidth parens) to mark them as functions without colliding with Mermaid's `()` node-shape syntax
+
 ## [0.0.3-alpha] — 2026-06-15
 
 ### Changed
