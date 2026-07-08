@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.4-beta] — 2026-07-08
+
 ### Added
 - `ksm-effects` module: `withEffects` + `onEnter<State>() effect { ... }` DSL for state-entry side effects, decoupled from `:ksm` core. Effect result is dispatched back into the machine as an `Event`; an in-flight effect is cancelled automatically when its state is left.
 - `ksm { outputDir = ... }` Gradle extension to override where `ksm-ir-plugin` writes generated `.mmd` files (defaults to `build/ksmGraphs/`).
