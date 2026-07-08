@@ -74,7 +74,7 @@ appLaunchStateMachine.dispatchEvent(EulaOutOfDate)
 
 ## 4. Add side effects (optional)
 
-Side effects are async work triggered upon state entry: network calls, timers, analytics, db writes - things that effect the outside world. However their result feeds back as an event. To do so I include an effects module:
+Side effects are async work triggered upon state entry: network calls, timers, analytics, db writes - things that affect the outside world. However their result feeds back as an event. To do so I include an effects module:
 
 ```kotlin
 implementation("coffee.adammakes.ksm:ksm-effects:<version>")

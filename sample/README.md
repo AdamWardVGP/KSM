@@ -23,14 +23,14 @@ stateDiagram-v2
     end note
 ```
 
-Before we get into the example though lets start with the basics.
+Before we get into the example though let's start with the basics.
 
 ---
 
 # Guide: Modeling with State Machines
 
 If you're new to state machines - welcome! They're a powerful tool but knowing how to use them and 
-and when to use them is a key skill. This is a practical guide to help bridge how to think in 
+ when to use them is a key skill. This is a practical guide to help bridge how to think in 
 events, states, and effects along with best practice tips and some things to watch out for.
 
 ---
@@ -39,7 +39,7 @@ events, states, and effects along with best practice tips and some things to wat
 
 A state machine has three moving parts:
 
-- **States** — These represent a *named situations* your system can be in (`Idle`, `Loading`, `Loaded`, `Failed`).
+- **States** — These represent a *named situation* your system can be in (`Idle`, `Loading`, `Loaded`, `Failed`).
 - **Events** — *facts about things that happened* (`RetryClicked`, `RequestSucceeded`, `RequestFailed`).
 - **Effects** — *work that needs to happen* as a result of being in a state (fire an API call, start a timer).
 
@@ -51,7 +51,7 @@ The machine's job is pure decision making: *given where I am and what just happe
 
 Most stateful bugs come from state being *scattered*. A few booleans representing `isLoading`, `hasError`, `dataReady` each seem reasonable alone. But four booleans actually describe sixteen combinations, and most are nonsense: `isLoading = true` AND `hasError = true` AND `dataReady = true` what does that even mean? You end up writing defensive checks against situations that should never exist.
 
-A state machine flips this. Instead of tracking flags and hoping they stay consistent, you enumerate the handful of situations that are *actually legal* and how you move between them. Illegal combinations can't be represented. Bugs stop being "how did we get into this impossible state?" (a much harder question that usually requires much time debuggin) and instead become answering "this transition shouldn't exist," which you can often spot just by looking at the diagram.
+A state machine flips this. Instead of tracking flags and hoping they stay consistent, you enumerate the handful of situations that are *actually legal* and how you move between them. Illegal combinations can't be represented. Bugs stop being "how did we get into this impossible state?" (a much harder question that usually requires much time debugging) and instead become answering "this transition shouldn't exist," which you can often spot just by looking at the diagram.
 
 ---
 
