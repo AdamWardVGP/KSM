@@ -12,7 +12,6 @@ import org.jetbrains.kotlin.ir.declarations.IrDeclarationWithName
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.declarations.IrPackageFragment
 import org.jetbrains.kotlin.ir.expressions.IrCall
-import org.jetbrains.kotlin.ir.expressions.IrClassReference
 import org.jetbrains.kotlin.ir.expressions.IrFunctionExpression
 import org.jetbrains.kotlin.ir.expressions.IrFunctionReference
 import org.jetbrains.kotlin.ir.types.IrSimpleType
@@ -139,29 +138,33 @@ class EffectContributorDslVisitor(private val graph: Graph) : IrVisitorVoid() {
         element.acceptChildrenVoid(this)
     }
 
-    // onEnter<S>() is inline/reified; after inlining the IR contains OnEnterScope(S::class, ...)
-    // The S::class literal appears as an IrClassReference, which we use to track the current state.
-    override fun visitClassReference(expression: IrClassReference) {
-        val name = expression.classType.classHierarchyName()
-        currentState = name
-        logger?.report(CompilerMessageSeverity.INFO, "KSM effects: onEnter DSL entry [$name]")
-        super.visitClassReference(expression)
-    }
-
     override fun visitCall(expression: IrCall) {
-        val fnName = expression.symbol.owner.name.asString()
-        if (fnName == "effect" || fnName == "and") {
-            val state = currentState ?: "UnknownState"
-            val bodyArg = expression.arguments.lastOrNull()
-            val effectName =
-                (bodyArg as? IrFunctionReference)?.symbol?.owner?.name?.asString() ?: "λ"
-            logger?.report(
-                CompilerMessageSeverity.INFO,
-                "KSM effects: effect[$effectName] for state [$state]",
-            )
-            graph.effects.getOrPut(state) { mutableListOf() }.add(StateEffect(effectName, false))
-        }
+        // Recurse first so that when we process "effect"/"and", currentState has already been set
+        // by the "onEnter" child call below.
         super.visitCall(expression)
+        when (expression.symbol.owner.name.asString()) {
+            "onEnter" -> {
+                // IrGenerationExtension runs before inline expansion, so S::class is not yet a
+                // literal IrClassReference. Read the reified type argument directly instead.
+                val typeArg = expression.typeArguments.firstOrNull()
+                currentState = typeArg?.classHierarchyName() ?: "UnknownState"
+                logger?.report(
+                    CompilerMessageSeverity.INFO,
+                    "KSM effects: onEnter [$currentState]",
+                )
+            }
+            "effect", "and" -> {
+                val state = currentState ?: "UnknownState"
+                val bodyArg = expression.arguments.lastOrNull()
+                val effectName =
+                    (bodyArg as? IrFunctionReference)?.symbol?.owner?.name?.asString() ?: "λ"
+                logger?.report(
+                    CompilerMessageSeverity.INFO,
+                    "KSM effects: effect[$effectName] for state [$state]",
+                )
+                graph.effects.getOrPut(state) { mutableListOf() }.add(StateEffect(effectName, false))
+            }
+        }
     }
 }
 
