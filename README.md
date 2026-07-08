@@ -18,11 +18,13 @@ In particular this state machine offers a few nice features:
 - 🌊 Transitions observable via Flow
 - 🧜‍♀️ Exportable directly to Mermaid diagrams
 
+
 The state machine itself is:
 - 🪶 Lightweight: dispatch uses `KClass` references, no annotation processing or code generation required
 - ➡️ Deterministic: In a given state one event → one transition
 - ⛔ Non-reentrant: events are processed serially
-- 👻 Side effects are run explicitly outside the FSM
+- 🔒 Pure: transition reducers `(State, Event) -> State`
+- 👻 Optional side effect layer with per-state lifecycle management
 
 ---
 
@@ -53,10 +55,6 @@ val appLaunchStateMachine = stateMachine<AppStates, AppEvents> {
     }
 
     state<AppStates.Login.CredentialsPrompt> {
-        //SideEffects run on the coroutines scope when a state is entered/exited
-        onEnter { prompt -> analytics.logScreen(prompt::class.simpleName.orEmpty()) }
-        onExit { analytics.log("leaving login") }
-
         on<AppEvents.LoginSuccess>() transitionTo AppStates.GoToMain
         //Events can carry payloads and pass them into new states via transitionWith
         on<AppEvents.LoginFailed>() transitionWith { _, event -> AppStates.Login.Failed(event.reason) }
@@ -74,14 +72,31 @@ appLaunchStateMachine.currentState.collect { newState -> ... }
 appLaunchStateMachine.dispatchEvent(EulaOutOfDate)
 ```
 
+## 4. Add side effects (optional)
+
+Side effects are async work triggered upon state entry: network calls, timers, analytics, db writes - things that affect the outside world. However their result feeds back as an event. To do so I include an effects module:
+
+```kotlin
+implementation("coffee.adammakes.ksm:ksm-effects:<version>")
+```
+
+Wrap your state machine with `withEffects` and register per-state work using the `onEnter` DSL:
+
+```kotlin
+val effectedMachine = appLaunchStateMachine.withEffects(coroutineScope) {
+    onEnter<AppStates.Login.CredentialsPrompt>() effect ::attemptAutoLogin
+    onEnter<AppStates.GoToMain>() effect ::loadUserProfile
+}
+```
+
+Each effect is a `suspend (State) -> Event`. Only one effect can be registered per state — registering a second one for the same state throws. When the machine leaves a state, an in-flight effect for that state is cancelled automatically. When an effect completes, the returned event is dispatched back into the machine.
+
+Effects registered via `withEffects` also appear as notes in generated Mermaid diagrams.
+
 ## Guidelines
 
 Transition reducers should stay pure and are intended to function as a mapper
 `(CurrentState, Event) -> ResultState`.
-
-Use `onEnter` and `onExit` for explicit state lifecycle work. Those hooks launch on
-`dispatchedOn`, so they can trigger I/O, analytics, persistence, or follow-up event dispatches
-without blocking the transition itself.
 
 ---
 

@@ -31,6 +31,7 @@ kotlin {
       implementation(libs.androidx.lifecycle.viewmodelSavedstate)
       implementation(libs.kotlinx.serialization.json)
       implementation(project(":ksm"))
+      implementation(project(":ksm-effects"))
     }
     commonTest.dependencies { implementation(libs.kotlin.test) }
     jvmMain.dependencies {

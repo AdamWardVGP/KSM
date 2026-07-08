@@ -1,6 +1,5 @@
 package coffee.adammakes.ksm
 
-import kotlin.also
 import kotlin.reflect.KClass
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
@@ -28,17 +27,6 @@ data class Transition<State : Any, Event : Any>(
   val reduce: (State, Event) -> State,
 )
 
-/** Represents work to dispatch when entering or exiting a state. */
-data class SideEffect<State : Any>(
-  val onEnter: (suspend (State) -> Unit)? = null,
-  val onExit: (suspend (State) -> Unit)? = null,
-)
-
-@PublishedApi
-internal fun <State : Any, FromState : State> sideEffect(
-  task: suspend (FromState) -> Unit
-): suspend (State) -> Unit = { state -> @Suppress("UNCHECKED_CAST") task(state as FromState) }
-
 /**
  * A finite state machine intended for use in view models. Think of this like a flow-chart for
  * sequences of states, guided by events.
@@ -52,7 +40,6 @@ internal fun <State : Any, FromState : State> sideEffect(
 class StateMachine<State : Any, Event : Any>(
   initial: State,
   val transitions: Map<KClass<out State>, Map<KClass<out Event>, Transition<State, Event>>>,
-  private val sideEffectMap: Map<KClass<out State>, SideEffect<State>>,
   private val scope: CoroutineScope,
 ) {
 
@@ -68,18 +55,11 @@ class StateMachine<State : Any, Event : Any>(
   private val events = Channel<Event>(Channel.UNLIMITED)
 
   init {
-    dispatchOnEnter(initial)
-
     scope.launch {
       for (event in events) {
         val state = _currentState.value
         val transition = resolveTransition(state, event) ?: continue
-
-        dispatchOnExit(state)
-
-        val newState = transition.reduce(state, event)
-        _currentState.value = newState
-        dispatchOnEnter(newState)
+        _currentState.value = transition.reduce(state, event)
       }
     }
   }
@@ -92,14 +72,6 @@ class StateMachine<State : Any, Event : Any>(
     events.trySend(event)
   }
 
-  private fun dispatchOnEnter(state: State) {
-    getSideEffect(state) { it.onEnter }?.let { task -> scope.launch { task(state) } }
-  }
-
-  private fun dispatchOnExit(state: State) {
-    getSideEffect(state) { it.onExit }?.let { task -> scope.launch { task(state) } }
-  }
-
   private fun resolveTransition(state: State, event: Event): Transition<State, Event>? =
     resolveStateDefinition(state, transitions)?.get(event::class)
 
@@ -110,20 +82,6 @@ class StateMachine<State : Any, Event : Any>(
           stateKClass != state::class && stateKClass.isInstance(state)
         }
         ?.value
-
-  private fun getSideEffect(
-    state: State,
-    taskSelector: (SideEffect<State>) -> (suspend (State) -> Unit)?,
-  ): (suspend (State) -> Unit)? =
-    sideEffectMap[state::class]?.let(taskSelector)
-      ?: sideEffectMap.entries
-        .firstOrNull { (stateKClass, tasks) ->
-          stateKClass != state::class &&
-            stateKClass.isInstance(state) &&
-            taskSelector(tasks) != null
-        }
-        ?.value
-        ?.let(taskSelector)
 }
 
 /**
@@ -156,21 +114,14 @@ class StateMachineBuilder<State : Any, Event : Any> {
 
   val transitions =
     mutableMapOf<KClass<out State>, Map<KClass<out Event>, Transition<State, Event>>>()
-  val sideEffectMap = mutableMapOf<KClass<out State>, SideEffect<State>>()
 
   inline fun <reified STATE : State> state(
     block: StateTransitionBuilder<STATE, State, Event>.() -> Unit
   ) {
     StateTransitionBuilder<STATE, State, Event>(STATE::class).apply(block).also { builder ->
       require(STATE::class !in transitions) { "State ${STATE::class.simpleName} already defined" }
-
       transitions[STATE::class] =
         builder.transitions as Map<KClass<out Event>, Transition<State, Event>>
-      sideEffectMap[STATE::class] =
-        SideEffect(
-          onEnter = builder.onEnterTask?.let { task -> sideEffect(task) },
-          onExit = builder.onExitTask?.let { task -> sideEffect(task) },
-        )
     }
   }
 
@@ -179,18 +130,6 @@ class StateMachineBuilder<State : Any, Event : Any> {
   ) {
 
     val transitions = mutableMapOf<KClass<out Event>, Transition<State, Event>>()
-    var onEnterTask: (suspend (FromState) -> Unit)? = null
-    var onExitTask: (suspend (FromState) -> Unit)? = null
-
-    fun onEnter(task: suspend (FromState) -> Unit) {
-      require(onEnterTask == null) { "onEnter already defined for state ${from.simpleName}" }
-      onEnterTask = task
-    }
-
-    fun onExit(task: suspend (FromState) -> Unit) {
-      require(onExitTask == null) { "onExit already defined for state ${from.simpleName}" }
-      onExitTask = task
-    }
 
     inline fun <reified EVENT : Event> on(): TransitionBuilder<EVENT> =
       TransitionBuilder(EVENT::class)
@@ -227,11 +166,6 @@ class StateMachineBuilder<State : Any, Event : Any> {
     val initial = requireNotNull(initialState) { "initialState must be set" }
     val scope = requireNotNull(dispatchedOn) { "dispatchedOn must be set" }
 
-    return StateMachine(
-      initial = initial,
-      transitions = transitions,
-      sideEffectMap = sideEffectMap,
-      scope = scope,
-    )
+    return StateMachine(initial = initial, transitions = transitions, scope = scope)
   }
 }
