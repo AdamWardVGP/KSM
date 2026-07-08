@@ -20,7 +20,7 @@ class EffectedStateMachine<State : Any, Event : Any>(
       machine.currentState.collect { state ->
         stateJob?.cancel()
         stateJob = launch {
-          contributor.effects(state).forEach { body ->
+          contributor.effects(state)?.let { body ->
             launch {
               val event = body(state)
               machine.dispatchEvent(event)
