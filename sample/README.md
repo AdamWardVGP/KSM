@@ -4,16 +4,23 @@ A choose-your-own-adventure app demonstrating KSM in a Compose Multiplatform Vie
 
 ```mermaid
 stateDiagram-v2
-    Start --> DarkForest : Begin
-    DarkForest --> OldBridge : GoLeft
-    DarkForest --> CaveEntrance : GoRight
-    OldBridge --> Treasure : CrossBridge
-    OldBridge --> GameOver : RunAway
-    CaveEntrance --> DarkForest : RunAway
-    FightMonster --> Treasure : Fight
-    FightMonster --> GameOver : RunAway
-    GameOver --> Start : Restart
-    FightMonster --> Start : Restart
+    Start --> DarkForest: Begin
+    DarkForest --> OldBridge: GoLeft
+    DarkForest --> CaveEntrance: GoRight
+    OldBridge --> Treasure: CrossBridge
+    OldBridge --> GameOver: RunAway
+    CaveEntrance --> FightMonster: EnterCave
+    CaveEntrance --> DarkForest: RunAway
+    FightMonster --> Treasure: Fight
+    FightMonster --> GameOver: RunAway
+    GameOver --> Start: Restart
+    Treasure --> Start: Restart
+    note right of Treasure
+        rainCoins
+    end note
+    note right of GameOver
+        rainSkulls
+    end note
 ```
 
 Before we get into the example though lets start with the basics.
