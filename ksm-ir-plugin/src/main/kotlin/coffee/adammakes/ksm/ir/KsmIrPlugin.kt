@@ -41,9 +41,9 @@ class KsmIrGenerationExtension(
 
         graphs.values.forEach { graph ->
             val file = File(outputDir, "stateMachine_${graph.name}.$outputFormat")
-            val mermaidOut = MermaidWriter.toMermaid(graph)
-            logger?.report(CompilerMessageSeverity.INFO, "Mermaid output:\n$mermaidOut")
-            file.writeText(mermaidOut)
+            val content = MermaidWriter.toMermaid(graph)
+            logger?.report(CompilerMessageSeverity.INFO, "mmd output:\n$content")
+            file.writeText(content)
         }
     }
 }
@@ -175,6 +175,10 @@ object MermaidWriter {
 
     fun toMermaid(graph: Graph): String {
         val sb = StringBuilder()
+        sb.appendLine("---")
+        sb.appendLine("config:")
+        sb.appendLine("  layout: elk")
+        sb.appendLine("---")
         sb.appendLine("stateDiagram-v2")
 
         for (edge in graph.edges) {

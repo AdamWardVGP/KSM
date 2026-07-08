@@ -13,6 +13,10 @@ class MermaidWriterTest {
         graph.edges.add(Edge("Final", "Reset", "Initial"))
 
         val expected = """
+            ---
+            config:
+              layout: elk
+            ---
             stateDiagram-v2
                 Initial --> Final: Move
                 Final --> Initial: Reset
