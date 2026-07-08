@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Side effect DSL simplified to one effect per state; registering a second `effect` for the same state now throws instead of silently replacing it. The previous `effect ::a and ::b` chaining is no longer supported.
 - Effect/action names in generated Mermaid notes now suffixed with `﹙﹚` (fullwidth parens) to mark them as functions without colliding with Mermaid's `()` node-shape syntax
-- 
+
 ### Removed
 - **Breaking:** `SideEffect(onEnter, onExit)` and the `state { }` builder's inline `onEnter`/`onExit` hooks removed from `:ksm` core. Migrate to the `ksm-effects` module's `withEffects` DSL — note `onExit` has no direct replacement; effects are cancelled on state exit rather than given an exit hook.
 

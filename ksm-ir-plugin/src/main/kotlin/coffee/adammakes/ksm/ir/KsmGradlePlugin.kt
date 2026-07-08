@@ -51,10 +51,8 @@ class KsmGradlePlugin : KotlinCompilerPluginSupportPlugin {
         val project = kotlinCompilation.target.project
         val defaultOutputDir = project.layout.buildDirectory.dir("ksmGraphs")
         return project.provider {
-            val extension = project.extensions.findByType(KsmExtension::class.java)
-            val outputDir =
-                extension?.outputDir?.orElse(defaultOutputDir)?.get()?.asFile?.absolutePath
-                    ?: defaultOutputDir.get().asFile.absolutePath
+            val extension = project.extensions.getByType(KsmExtension::class.java)
+            val outputDir = extension.outputDir.orElse(defaultOutputDir).get().asFile.absolutePath
             listOf(SubpluginOption("outputDir", outputDir))
         }
     }
