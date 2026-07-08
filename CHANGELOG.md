@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.5-beta] — 2026-07-08
+
+### Fixed
+- **Breaking:** Downgraded Kotlin from 2.3.0 to 2.2.20 for consumer compatibility. `ksm-ir-plugin`'s `CompilerPluginRegistrar` no longer overrides `pluginId` (not present on the 2.2.x API), and the plugin's supported-Kotlin-version guard now checks for `2.2.x` instead of `2.3.x`.
+
 ## [0.0.4-beta] — 2026-07-08
 
 ### Added

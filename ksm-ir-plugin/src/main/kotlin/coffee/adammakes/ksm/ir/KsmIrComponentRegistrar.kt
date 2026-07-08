@@ -16,9 +16,6 @@ var logger: MessageCollector? = null
  */
 class KsmIrComponentRegistrar : CompilerPluginRegistrar() {
 
-    override val pluginId: String
-        get() = "coffee.adammakes.ksm.ir"
-
     override val supportsK2: Boolean
         get() = true
 
