@@ -14,7 +14,9 @@ private const val SUPPORTED_KOTLIN_MINOR = "2.3"
 
 @OptIn(ExperimentalCompilerApi::class)
 class KsmGradlePlugin : KotlinCompilerPluginSupportPlugin {
-    override fun apply(target: Project) {}
+    override fun apply(target: Project) {
+        target.extensions.create("ksm", KsmExtension::class.java)
+    }
 
     override fun isApplicable(kotlinCompilation: KotlinCompilation<*>): Boolean {
         val project = kotlinCompilation.target.project
@@ -47,8 +49,12 @@ class KsmGradlePlugin : KotlinCompilerPluginSupportPlugin {
         kotlinCompilation: KotlinCompilation<*>
     ): Provider<List<SubpluginOption>> {
         val project = kotlinCompilation.target.project
-        val outputDir = project.layout.buildDirectory.dir("ksmGraphs").get().asFile.absolutePath
-        return project.provider { listOf(SubpluginOption("outputDir", outputDir)) }
+        val defaultOutputDir = project.layout.buildDirectory.dir("ksmGraphs")
+        return project.provider {
+            val extension = project.extensions.getByType(KsmExtension::class.java)
+            val outputDir = extension.outputDir.orElse(defaultOutputDir).get().asFile.absolutePath
+            listOf(SubpluginOption("outputDir", outputDir))
+        }
     }
 
     private fun loadVersion(): String =

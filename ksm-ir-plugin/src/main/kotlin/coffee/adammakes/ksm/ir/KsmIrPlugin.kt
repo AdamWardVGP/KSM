@@ -172,6 +172,10 @@ object MermaidWriter {
 
     fun toMermaid(graph: Graph): String {
         val sb = StringBuilder()
+        sb.appendLine("---")
+        sb.appendLine("config:")
+        sb.appendLine("  layout: elk")
+        sb.appendLine("---")
         sb.appendLine("stateDiagram-v2")
 
         for (edge in graph.edges) {
@@ -182,7 +186,7 @@ object MermaidWriter {
             sb.appendLine("    note right of $state")
             for (effect in effects) {
                 val cancelStr = if (effect.hasCancel) " ↩" else ""
-                sb.appendLine("        ${effect.name}$cancelStr")
+                sb.appendLine("        ${effect.name}﹙﹚$cancelStr")
             }
             sb.appendLine("    end note")
         }
@@ -193,12 +197,11 @@ object MermaidWriter {
 
 /**
  * Returns the class name including hierarchy within its containing class, but excluding the
- * package and top-level sealed class name. Nested separators use · (U+00B7) instead of . so
- * the result is valid as a Mermaid state identifier.
+ * package and top-level sealed class name. Nested separators use . to show hierarchy.
  *
  * Examples (assuming top-level sealed class is stripped):
  *   AdventureState.Start        → "Start"
- *   GameState.Combat.Fighting   → "Combat·Fighting"
+ *   GameState.Combat.Fighting   → "Combat.Fighting"
  */
 private fun IrType.classHierarchyName(): String {
     val owner = (this as? IrSimpleType)?.classifierOrNull?.owner
@@ -213,5 +216,5 @@ private fun IrType.classHierarchyName(): String {
         current = parent
     }
     names.removeAt(0)
-    return names.joinToString("·")
+    return names.joinToString(".")
 }

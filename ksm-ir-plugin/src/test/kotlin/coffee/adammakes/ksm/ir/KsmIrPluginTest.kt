@@ -38,6 +38,39 @@ class KsmIrPluginTest {
                 }
             }
         """
+
+        private const val nestedSource = """
+            package coffee.adammakes.ksm.test
+
+            import coffee.adammakes.ksm.stateMachine
+            import kotlinx.coroutines.GlobalScope
+
+            sealed class TestState {
+                object Idle : TestState()
+                sealed class Active : TestState() {
+                    object Running : Active()
+                    object Paused : Active()
+                }
+            }
+
+            sealed class TestEvent {
+                object Start : TestEvent()
+                object Pause : TestEvent()
+            }
+
+            val fsm = stateMachine<TestState, TestEvent> {
+                initialState = TestState.Idle
+                dispatchedOn = GlobalScope
+
+                state<TestState.Idle> {
+                    on<TestEvent.Start>() transitionTo TestState.Active.Running
+                }
+
+                state<TestState.Active.Running> {
+                    on<TestEvent.Pause>() transitionTo TestState.Active.Paused
+                }
+            }
+        """
     }
 
     @OptIn(ExperimentalCompilerApi::class)
@@ -92,6 +125,44 @@ class KsmIrPluginTest {
             val content = mmdFiles.first().readText()
             assertTrue(content.contains("stateDiagram-v2"), "Expected stateDiagram-v2 in output")
             assertTrue(content.contains("Initial --> Final: Move"), "Expected transition in output")
+        } finally {
+            outputDir.deleteRecursively()
+        }
+    }
+
+    @OptIn(ExperimentalCompilerApi::class)
+    @Test
+    fun `nested sealed states render with dot separator`() {
+        val outputDir = Files.createTempDirectory("ksm-nested-test").toFile()
+        try {
+            val kotlinSource = SourceFile.kotlin("NestedStateMachine.kt", nestedSource.trimIndent())
+            val compilation = KotlinCompilation().apply {
+                sources = listOf(kotlinSource)
+                compilerPluginRegistrars = listOf(KsmIrComponentRegistrar())
+                commandLineProcessors = listOf(KsmCommandLineProcessor())
+                pluginOptions = listOf(
+                    PluginOption("coffee.adammakes.ksm.ir", "outputDir", outputDir.absolutePath)
+                )
+                jvmTarget = "21"
+                inheritClassPath = true
+                messageOutputStream = System.out
+            }
+
+            val result = compilation.compile()
+            assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+
+            val mmdFiles = outputDir.listFiles { _, name -> name.endsWith(".mmd") }
+            assertTrue(mmdFiles != null && mmdFiles.isNotEmpty())
+
+            val content = mmdFiles.first().readText()
+            assertTrue(
+                content.contains("Idle --> Active.Running: Start"),
+                "Expected nested state with dot separator, got:\n$content",
+            )
+            assertTrue(
+                content.contains("Active.Running --> Active.Paused: Pause"),
+                "Expected nested-to-nested transition, got:\n$content",
+            )
         } finally {
             outputDir.deleteRecursively()
         }
