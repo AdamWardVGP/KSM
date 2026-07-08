@@ -139,7 +139,7 @@ class EffectContributorDslVisitor(private val graph: Graph) : IrVisitorVoid() {
     }
 
     override fun visitCall(expression: IrCall) {
-        // Recurse first so that when we process "effect"/"and", currentState has already been set
+        // Recurse first so that when we process "effect", currentState has already been set
         // by the "onEnter" child call below.
         super.visitCall(expression)
         when (expression.symbol.owner.name.asString()) {
@@ -153,7 +153,7 @@ class EffectContributorDslVisitor(private val graph: Graph) : IrVisitorVoid() {
                     "KSM effects: onEnter [$currentState]",
                 )
             }
-            "effect", "and" -> {
+            "effect" -> {
                 val state = currentState ?: "UnknownState"
                 val bodyArg = expression.arguments.lastOrNull()
                 val effectName =

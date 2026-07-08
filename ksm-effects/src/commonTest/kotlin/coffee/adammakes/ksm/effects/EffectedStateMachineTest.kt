@@ -4,6 +4,7 @@ import app.cash.turbine.test
 import coffee.adammakes.ksm.stateMachine
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -67,31 +68,17 @@ class EffectedStateMachineTest {
     }
 
   @Test
-  fun `multiple effects all run for a state`() =
+  fun `registering a second effect for the same state throws`() =
     testScope.runTest {
-      var firstCalled = false
-      var secondCalled = false
       val scope = CoroutineScope(coroutineContext + SupervisorJob())
-
       val fsm = machine(scope)
-      val effected =
+
+      assertFailsWith<IllegalStateException> {
         fsm.withEffects(scope) {
-          onEnter<Active>() effect
-            { _ ->
-              firstCalled = true
-              CompletableDeferred<Event>().await()
-            } and
-            { _ ->
-              secondCalled = true
-              CompletableDeferred<Event>().await()
-            }
+          onEnter<Active>() effect { _ -> CompletableDeferred<Event>().await() }
+          onEnter<Active>() effect { _ -> CompletableDeferred<Event>().await() }
         }
-
-      effected.dispatchEvent(Activate)
-      advanceUntilIdle()
-
-      assertEquals(true, firstCalled)
-      assertEquals(true, secondCalled)
+      }
 
       scope.cancel()
     }

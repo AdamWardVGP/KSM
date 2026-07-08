@@ -74,7 +74,7 @@ appLaunchStateMachine.dispatchEvent(EulaOutOfDate)
 
 ## 4. Add side effects (optional)
 
-Side effects are async work triggered upon state entry: network calls, timers, analytics, db writes - things that effect the outside world. However their result feeds back as an event. To do so I include an effects module:
+Side effects are async work triggered upon state entry: network calls, timers, analytics, db writes - things that affect the outside world. However their result feeds back as an event. To do so I include an effects module:
 
 ```kotlin
 implementation("coffee.adammakes.ksm:ksm-effects:<version>")
@@ -85,11 +85,11 @@ Wrap your state machine with `withEffects` and register per-state work using the
 ```kotlin
 val effectedMachine = appLaunchStateMachine.withEffects(coroutineScope) {
     onEnter<AppStates.Login.CredentialsPrompt>() effect ::attemptAutoLogin
-    onEnter<AppStates.GoToMain>() effect ::loadUserProfile and ::prefetchFeed
+    onEnter<AppStates.GoToMain>() effect ::loadUserProfile
 }
 ```
 
-Each effect is a `suspend (State) -> Event`. Multiple effects registered with `and` run concurrently. When the machine leaves a state, all in-flight effects for that state are cancelled automatically. When an effect completes, the returned event is dispatched back into the machine.
+Each effect is a `suspend (State) -> Event`. Only one effect can be registered per state — registering a second one for the same state throws. When the machine leaves a state, an in-flight effect for that state is cancelled automatically. When an effect completes, the returned event is dispatched back into the machine.
 
 Effects registered via `withEffects` also appear as notes in generated Mermaid diagrams.
 

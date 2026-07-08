@@ -34,7 +34,7 @@ jobs:
           ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.GPG_KEY_CONTENTS }}
 
       - name: Publish to MavenCentral
-        run: ./gradlew :ksm:publishAndReleaseToMavenCentral :ksm-ir-plugin:publishAndReleaseToMavenCentral --no-configuration-cache
+        run: ./gradlew :ksm:publishAndReleaseToMavenCentral :ksm-effects:publishAndReleaseToMavenCentral :ksm-ir-plugin:publishAndReleaseToMavenCentral --no-configuration-cache
         env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}

@@ -1,6 +1,7 @@
 package coffee.adammakes.ksm.effects
 
 import coffee.adammakes.ksm.StateMachine
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
@@ -20,9 +21,20 @@ class EffectedStateMachine<State : Any, Event : Any>(
       machine.currentState.collect { state ->
         stateJob?.cancel()
         stateJob = launch {
-          contributor.effects(state).forEach { body ->
+          contributor.effects(state)?.let { body ->
             launch {
-              val event = body(state)
+              val event =
+                try {
+                  body(state)
+                } catch (e: CancellationException) {
+                  throw e
+                } catch (
+                  @Suppress("TooGenericExceptionCaught", "SwallowedException") e: Throwable) {
+                  // An effect body is arbitrary user code; an uncaught throw here would
+                  // propagate to stateJob's parent and kill the collector for all future
+                  // states, so isolate failures to this single effect.
+                  return@launch
+                }
               machine.dispatchEvent(event)
             }
           }
