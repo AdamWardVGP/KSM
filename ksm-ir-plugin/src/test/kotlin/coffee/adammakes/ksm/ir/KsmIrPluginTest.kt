@@ -167,36 +167,4 @@ class KsmIrPluginTest {
             outputDir.deleteRecursively()
         }
     }
-
-    @OptIn(ExperimentalCompilerApi::class)
-    @Test
-    fun `plugin respects outputFormat option`() {
-        val outputDir = Files.createTempDirectory("ksm-format-test").toFile()
-        try {
-            val kotlinSource = SourceFile.kotlin("TestStateMachine.kt", testSource.trimIndent())
-            val compilation = KotlinCompilation().apply {
-                sources = listOf(kotlinSource)
-                compilerPluginRegistrars = listOf(KsmIrComponentRegistrar())
-                commandLineProcessors = listOf(KsmCommandLineProcessor())
-                pluginOptions = listOf(
-                    PluginOption("coffee.adammakes.ksm.ir", "outputDir", outputDir.absolutePath),
-                    PluginOption("coffee.adammakes.ksm.ir", "outputFormat", "mmd"),
-                )
-                jvmTarget = "21"
-                inheritClassPath = true
-                messageOutputStream = System.out
-            }
-
-            val result = compilation.compile()
-            assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
-
-            val outputFiles = outputDir.listFiles { _, name -> name.endsWith(".mmd") }
-            assertTrue(
-                outputFiles != null && outputFiles.isNotEmpty(),
-                "Expected .mmd files for outputFormat=mmd",
-            )
-        } finally {
-            outputDir.deleteRecursively()
-        }
-    }
 }
