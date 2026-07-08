@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `ksm-effects` module: `withEffects` + `onEnter<State>() effect { ... }` DSL for state-entry side effects, decoupled from `:ksm` core. Effect result is dispatched back into the machine as an `Event`; an in-flight effect is cancelled automatically when its state is left.
+
+### Changed
+- Side effect DSL simplified to one effect per state; registering a second `effect` for the same state now throws instead of silently replacing it. The previous `effect ::a and ::b` chaining is no longer supported.
+
+### Removed
+- **Breaking:** `SideEffect(onEnter, onExit)` and the `state { }` builder's inline `onEnter`/`onExit` hooks removed from `:ksm` core. Migrate to the `ksm-effects` module's `withEffects` DSL — note `onExit` has no direct replacement; effects are cancelled on state exit rather than given an exit hook.
+
 ## [0.0.3-alpha] — 2026-06-15
 
 ### Changed
