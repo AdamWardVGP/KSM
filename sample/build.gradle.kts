@@ -10,6 +10,8 @@ plugins {
   id("coffee.adammakes.ksm.ir")
 }
 
+ksm { outputDir = layout.projectDirectory.dir("ksmGraphs") }
+
 kotlin {
   androidTarget()
   jvm()

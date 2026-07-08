@@ -26,10 +26,7 @@ import java.io.File
  * Step 2:
  * Implement our IrGenerationExtension which searches files and calls our visitor.
  */
-class KsmIrGenerationExtension(
-    private val outputDirPath: String?,
-    private val outputFormat: String = "mmd",
-) : IrGenerationExtension {
+class KsmIrGenerationExtension(private val outputDirPath: String?) : IrGenerationExtension {
     override fun generate(moduleFragment: IrModuleFragment, pluginContext: IrPluginContext) {
         val graphs = mutableMapOf<String, Graph>()
         val visitor = KsmIrVisitor(pluginContext, graphs)
@@ -40,10 +37,10 @@ class KsmIrGenerationExtension(
         outputDir.mkdirs()
 
         graphs.values.forEach { graph ->
-            val file = File(outputDir, "stateMachine_${graph.name}.$outputFormat")
-            val content = MermaidWriter.toMermaid(graph)
-            logger?.report(CompilerMessageSeverity.INFO, "mmd output:\n$content")
-            file.writeText(content)
+            val file = File(outputDir, "stateMachine_${graph.name}.mmd")
+            val mermaidOut = MermaidWriter.toMermaid(graph)
+            logger?.report(CompilerMessageSeverity.INFO, "Mermaid output:\n$mermaidOut")
+            file.writeText(mermaidOut)
         }
     }
 }

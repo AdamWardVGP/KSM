@@ -26,9 +26,6 @@ class KsmIrComponentRegistrar : CompilerPluginRegistrar() {
         logger = configuration.get(CommonConfigurationKeys.MESSAGE_COLLECTOR_KEY, MessageCollector.NONE)
 
         val outputDir = configuration.get(OUTPUT_DIR_KEY)
-        val outputFormat = configuration.get(OUTPUT_FORMAT_KEY) ?: "mmd"
-        IrGenerationExtension.registerExtension(
-            extension = KsmIrGenerationExtension(outputDir, outputFormat)
-        )
+        IrGenerationExtension.registerExtension(extension = KsmIrGenerationExtension(outputDir))
     }
 }
