@@ -8,8 +8,7 @@ fun interface EffectContributor<State : Any, Event : Any> {
 
 class EffectContributorBuilder<State : Any, Event : Any> {
 
-  @PublishedApi
-  internal val handlers = mutableMapOf<KClass<out State>, suspend (State) -> Event>()
+  @PublishedApi internal val handlers = mutableMapOf<KClass<out State>, suspend (State) -> Event>()
 
   inline fun <reified S : State> onEnter() = OnEnterScope<S, State, Event>(S::class, handlers)
 

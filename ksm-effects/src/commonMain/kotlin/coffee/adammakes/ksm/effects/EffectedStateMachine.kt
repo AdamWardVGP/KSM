@@ -1,6 +1,7 @@
 package coffee.adammakes.ksm.effects
 
 import coffee.adammakes.ksm.StateMachine
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
@@ -22,7 +23,14 @@ class EffectedStateMachine<State : Any, Event : Any>(
         stateJob = launch {
           contributor.effects(state)?.let { body ->
             launch {
-              val event = body(state)
+              val event =
+                try {
+                  body(state)
+                } catch (e: CancellationException) {
+                  throw e
+                } catch (e: Throwable) {
+                  return@launch
+                }
               machine.dispatchEvent(event)
             }
           }
