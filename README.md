@@ -122,19 +122,12 @@ Apply the plugin in your `build.gradle.kts`:
 plugins {
     id("coffee.adammakes.ksm.ir") version "<version>"
 }
+
+//optionally set an output directory
+ksm { outputDir = layout.projectDirectory.dir("ksmGraphs") }
 ```
 
 That's it. Every `compileKotlin` task will automatically write `.mmd` files to `build/ksmGraphs/` — one per state machine found in your source.
-
-## Configuration (optional)
-
-Override the output directory via the `ksm` extension:
-
-```kotlin
-ksm {
-    outputDir = layout.projectDirectory.dir("ksmGraphs")
-}
-```
 
 ```mermaid
 stateDiagram-v2
