@@ -31,17 +31,25 @@ data class Transition<State : Any, Event : Any>(
  * A finite state machine intended for use in view models. Think of this like a flow-chart for
  * sequences of states, guided by events.
  *
- * A single [State] is persisted and awaits an [Event]. When a relevant [Event] is received, the
- * machine transitions to a new [State] and emits it via [currentState].
+ * A single concrete [State] is persisted and awaits an [Event]. When a relevant [Event] is
+ * received, the machine resolves a transition from that state outward through its explicitly
+ * declared parents, then emits the resulting [State] via [currentState].
  *
- * States must be unique in the graph; terminal states (no outgoing transitions) are allowed.
- * Unhandled events are silently ignored.
+ * States must be declared at most once in the graph; terminal states (no outgoing transitions) are
+ * allowed. Unhandled events are silently ignored.
  */
 class StateMachine<State : Any, Event : Any>(
   initial: State,
   val transitions: Map<KClass<out State>, Map<KClass<out Event>, Transition<State, Event>>>,
   private val scope: CoroutineScope,
+  private val parents: Map<KClass<out State>, KClass<out State>?>,
 ) {
+
+  constructor(
+    initial: State,
+    transitions: Map<KClass<out State>, Map<KClass<out Event>, Transition<State, Event>>>,
+    scope: CoroutineScope,
+  ) : this(initial, transitions, scope, emptyMap())
 
   private val _currentState = MutableStateFlow(initial)
 
@@ -72,16 +80,26 @@ class StateMachine<State : Any, Event : Any>(
     events.trySend(event)
   }
 
-  private fun resolveTransition(state: State, event: Event): Transition<State, Event>? =
-    resolveStateDefinition(state, transitions)?.get(event::class)
+  /**
+   * Returns the explicitly declared hierarchy path for [state], ordered from the outermost parent
+   * to the concrete state.
+   *
+   * A state that was not nested beneath a parent has a path containing only its concrete class.
+   */
+  fun statePath(state: State): List<KClass<out State>> {
+    val path = mutableListOf<KClass<out State>>()
+    var current: KClass<out State>? = state::class
+    while (current != null) {
+      path += current
+      current = parents[current]
+    }
+    return path.asReversed()
+  }
 
-  private fun <T> resolveStateDefinition(state: State, definitions: Map<KClass<out State>, T>): T? =
-    definitions[state::class]
-      ?: definitions.entries
-        .firstOrNull { (stateKClass, _) ->
-          stateKClass != state::class && stateKClass.isInstance(state)
-        }
-        ?.value
+  private fun resolveTransition(state: State, event: Event): Transition<State, Event>? =
+    statePath(state).asReversed().firstNotNullOfOrNull { stateClass ->
+      transitions[stateClass]?.get(event::class)
+    }
 }
 
 /**
@@ -115,21 +133,42 @@ class StateMachineBuilder<State : Any, Event : Any> {
   val transitions =
     mutableMapOf<KClass<out State>, Map<KClass<out Event>, Transition<State, Event>>>()
 
+  @PublishedApi internal val parents = mutableMapOf<KClass<out State>, KClass<out State>?>()
+
+  /** Declares a top-level state and its transitions or nested child states. */
   inline fun <reified STATE : State> state(
     block: StateTransitionBuilder<STATE, State, Event>.() -> Unit
+  ) = registerState(parent = null, block)
+
+  @PublishedApi
+  internal inline fun <reified STATE : State> registerState(
+    parent: KClass<out State>?,
+    block: StateTransitionBuilder<STATE, State, Event>.() -> Unit,
   ) {
-    StateTransitionBuilder<STATE, State, Event>(STATE::class).apply(block).also { builder ->
-      require(STATE::class !in transitions) { "State ${STATE::class.simpleName} already defined" }
+    require(STATE::class !in parents) { "State ${STATE::class.simpleName} already defined" }
+    parents[STATE::class] = parent
+
+    StateTransitionBuilder(STATE::class, this).apply(block).also { builder ->
+      @Suppress("UNCHECKED_CAST")
       transitions[STATE::class] =
         builder.transitions as Map<KClass<out Event>, Transition<State, Event>>
     }
   }
 
   class StateTransitionBuilder<FromState : State, State : Any, Event : Any>(
-    val from: KClass<FromState>
+    val from: KClass<FromState>,
+    @PublishedApi internal val machineBuilder: StateMachineBuilder<State, Event>,
   ) {
 
     val transitions = mutableMapOf<KClass<out Event>, Transition<State, Event>>()
+
+    /**
+     * Declares a child of this state. Transitions not handled by the active child are resolved by
+     * walking outward through its explicitly declared parents.
+     */
+    inline fun <reified CHILD : FromState> state(
+      block: StateTransitionBuilder<CHILD, State, Event>.() -> Unit
+    ) = machineBuilder.registerState(parent = from, block)
 
     inline fun <reified EVENT : Event> on(): TransitionBuilder<EVENT> =
       TransitionBuilder(EVENT::class)
@@ -166,6 +205,11 @@ class StateMachineBuilder<State : Any, Event : Any> {
     val initial = requireNotNull(initialState) { "initialState must be set" }
     val scope = requireNotNull(dispatchedOn) { "dispatchedOn must be set" }
 
-    return StateMachine(initial = initial, transitions = transitions, scope = scope)
+    return StateMachine(
+      initial = initial,
+      transitions = transitions,
+      parents = parents,
+      scope = scope,
+    )
   }
 }
