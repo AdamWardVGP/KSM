@@ -1,0 +1,46 @@
+name: KsmSample
+
+options:
+  bundleIdPrefix: dev.adamwardvgp.sample
+  deploymentTarget:
+    iOS: "15.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    EXCLUDED_ARCHS[sdk=iphonesimulator*]: x86_64
+
+targets:
+  KsmSample:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+    info:
+      path: Generated/Info.plist
+      properties:
+        CFBundleDisplayName: KsmSample
+        CADisableMinimumFrameDurationOnPhone: true
+    settings:
+      base:
+        PRODUCT_NAME: KsmSample
+        PRODUCT_BUNDLE_IDENTIFIER: dev.adamwardvgp.sample.adventure
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGN_STYLE: Automatic
+        FRAMEWORK_SEARCH_PATHS:
+          - $(inherited)
+          - $(SRCROOT)/../build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)
+    preBuildScripts:
+      - name: Build Kotlin framework
+        basedOnDependencyAnalysis: false
+        script: |
+          if [ "YES" = "$OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED" ]; then
+            echo "Skipping Gradle build (OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED=YES)"
+            exit 0
+          fi
+          cd "$SRCROOT/../.."
+          ./gradlew :sample:embedAndSignAppleFrameworkForXcode

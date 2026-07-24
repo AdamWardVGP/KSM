@@ -45,5 +45,9 @@ bin/
 ### Mac OS ###
 .DS_Store
 
+### Xcode ###
+*.xcodeproj/
+/sample/iosApp/Generated/
+
 ### Local ###
 local.properties

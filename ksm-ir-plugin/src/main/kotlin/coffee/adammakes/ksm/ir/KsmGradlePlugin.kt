@@ -7,6 +7,7 @@ import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.gradle.dsl.KotlinProjectExtension
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilerPluginSupportPlugin
+import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 import org.jetbrains.kotlin.gradle.plugin.SubpluginArtifact
 import org.jetbrains.kotlin.gradle.plugin.SubpluginOption
 
@@ -19,6 +20,8 @@ class KsmGradlePlugin : KotlinCompilerPluginSupportPlugin {
     }
 
     override fun isApplicable(kotlinCompilation: KotlinCompilation<*>): Boolean {
+        if (kotlinCompilation.target.platformType == KotlinPlatformType.native) return false
+
         val project = kotlinCompilation.target.project
         val kotlinVersion =
             project.extensions.findByType(KotlinProjectExtension::class.java)?.coreLibrariesVersion
