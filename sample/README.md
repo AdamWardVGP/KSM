@@ -4,6 +4,15 @@ A choose-your-own-adventure app demonstrating KSM in a Compose Multiplatform Vie
 
 ```mermaid
 stateDiagram-v2
+    Start
+    DarkForest
+    OldBridge
+    CaveEntrance
+    FightMonster
+    state Finished {
+        GameOver
+        Treasure
+    }
     Start --> DarkForest: Begin
     DarkForest --> OldBridge: GoLeft
     DarkForest --> CaveEntrance: GoRight
@@ -13,13 +22,12 @@ stateDiagram-v2
     CaveEntrance --> DarkForest: RunAway
     FightMonster --> Treasure: Fight
     FightMonster --> GameOver: RunAway
-    GameOver --> Start: Restart
-    Treasure --> Start: Restart
+    Finished --> Start: Restart
     note right of Treasure
-        rainCoins
+        rainCoins﹙﹚
     end note
     note right of GameOver
-        rainSkulls
+        rainSkulls﹙﹚
     end note
 ```
 
@@ -399,12 +407,29 @@ sealed interface AdventureState {
     data object OldBridge : AdventureState
     data object CaveEntrance : AdventureState
     data class FightMonster(val monster: String) : AdventureState  // name lives here
-    data object Treasure : AdventureState
-    data class GameOver(val reason: String) : AdventureState       // reason lives here
+    sealed interface Finished : AdventureState
+    data object Treasure : Finished
+    data class GameOver(val reason: String) : Finished             // reason lives here
 }
 ```
 
 `FightMonster` carries the monster name because that data only exists *while fighting*. `GameOver` carries the reason because it only exists *at game over*. Neither needs external storage.
+
+`Treasure` and `GameOver` are both finished adventures, so they share their restart behavior through
+an explicit hierarchy:
+
+```kotlin
+state<AdventureState.Finished> {
+    on<AdventureEvent.Restart>() transitionTo AdventureState.Start
+
+    state<AdventureState.GameOver> {}
+    state<AdventureState.Treasure> {}
+}
+```
+
+The active state is still the serializable concrete leaf (`Treasure` or `GameOver`), which is what
+the sample writes to `SavedStateHandle`. `Finished` organizes inherited behavior; it is not a
+second stored state and KSM does not keep hidden history.
 
 Effects trigger emoji rain on state entry:
 
@@ -423,6 +448,7 @@ These reach out to the world emitting into a `SharedFlow` the UI collects. The s
 
 **Do**
 - Put each state's data *in* that state. The compiler stops you from touching data that doesn't exist in the current situation.
+- Nest states under the narrowest parent that genuinely owns their shared transitions.
 - Name states as situations (nouns); name events as past-tense facts about what occurred.
 - If you want to make network calls, or run timers do it in a side effect.
 - Feed those effect results back into the machine as events.
@@ -431,4 +457,3 @@ These reach out to the world emitting into a `SharedFlow` the UI collects. The s
 - Don't keep state outside the machine (no shadow flags, no side caches).
 - Don't bake "what to do next" into the event name.
 - Don't let an effect write state directly send a result event instead.
-

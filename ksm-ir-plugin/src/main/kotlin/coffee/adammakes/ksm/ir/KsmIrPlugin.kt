@@ -2,6 +2,7 @@ package coffee.adammakes.ksm.ir
 
 import coffee.adammakes.ksm.ir.model.Edge
 import coffee.adammakes.ksm.ir.model.Graph
+import coffee.adammakes.ksm.ir.model.StateDeclaration
 import coffee.adammakes.ksm.ir.model.StateEffect
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
@@ -17,6 +18,7 @@ import org.jetbrains.kotlin.ir.expressions.IrFunctionReference
 import org.jetbrains.kotlin.ir.types.IrSimpleType
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.classifierOrNull
+import org.jetbrains.kotlin.ir.util.fqNameWhenAvailable
 import org.jetbrains.kotlin.ir.util.render
 import org.jetbrains.kotlin.ir.visitors.IrVisitorVoid
 import org.jetbrains.kotlin.ir.visitors.acceptChildrenVoid
@@ -63,8 +65,9 @@ class KsmIrVisitor(
     }
 
     private fun handleStateMachine(call: IrCall) {
-        val fqn = call.typeArguments.firstOrNull()?.render() ?: return
-        val graph = Graph(fqn.split(".").last())
+        val stateType = call.typeArguments.firstOrNull() ?: return
+        val fqn = stateType.render()
+        val graph = Graph(stateType.diagramName())
         graphs[fqn] = graph
         logger?.report(CompilerMessageSeverity.INFO, "KSM: found stateMachine for $fqn")
         val lambda = call.arguments.filterIsInstance<IrFunctionExpression>().firstOrNull()
@@ -82,89 +85,81 @@ class KsmIrVisitor(
 
 class StateMachineDslVisitor(private val graph: Graph) : IrVisitorVoid() {
 
+    private var parentStateId: String? = null
+
     override fun visitElement(element: IrElement) {
         element.acceptChildrenVoid(this)
-    }
-
-    private var currentState: String? = null
-    private var currentEvent: String? = null
-    private var targetState: String? = null
-
-    private fun checkAddItems() {
-        if (currentState != null && currentEvent != null && targetState != null) {
-            graph.edges.add(
-                Edge(
-                    from = currentState ?: "UNKNOWN",
-                    to = targetState ?: "UNKNOWN",
-                    event = currentEvent ?: "UNKNOWN",
-                )
-            )
-        }
     }
 
     override fun visitCall(expression: IrCall) {
         when (expression.symbol.owner.name.asString()) {
             "state" -> {
-                val typeArg = expression.typeArguments.firstOrNull()
-                currentState = typeArg?.classHierarchyName() ?: "UnknownState"
-                logger?.report(CompilerMessageSeverity.INFO, "KSM: state [$currentState]")
-                graph.states.add(currentState!!)
-            }
-            "on" -> {
-                val typeArg = expression.typeArguments.firstOrNull()
-                currentEvent = typeArg?.classHierarchyName() ?: "UnknownEvent"
-                logger?.report(CompilerMessageSeverity.INFO, "KSM: event [$currentEvent]")
-                checkAddItems()
+                val state = expression.typeArguments.firstOrNull()?.stateType()
+                    ?: StateType("UnknownState", "UnknownState")
+                val previousParent = parentStateId
+                graph.declareState(state.id, state.name, previousParent)
+                logger?.report(CompilerMessageSeverity.INFO, "KSM: state [${state.name}]")
+
+                parentStateId = state.id
+                expression.arguments
+                    .filterIsInstance<IrFunctionExpression>()
+                    .firstOrNull()
+                    ?.function
+                    ?.body
+                    ?.accept(this, null)
+                parentStateId = previousParent
+                return
             }
             "transitionTo" -> {
-                targetState = expression.arguments[1]?.type?.classHierarchyName() ?: "UnknownTarget"
-                logger?.report(CompilerMessageSeverity.INFO, "KSM: transitionTo [$targetState]")
+                val target = expression.arguments.filterNotNull().lastOrNull()?.type?.stateType()
+                    ?: StateType("UnknownTarget", "UnknownTarget")
+                addTransition(expression, target)
             }
             "transitionWith" -> {
-                targetState =
-                    expression.typeArguments.firstOrNull()?.classHierarchyName() ?: "UnknownTarget"
-                logger?.report(CompilerMessageSeverity.INFO, "KSM: transitionWith [$targetState]")
+                val target = expression.typeArguments.firstOrNull()?.stateType()
+                    ?: StateType("UnknownTarget", "UnknownTarget")
+                addTransition(expression, target)
             }
         }
         super.visitCall(expression)
     }
+
+    private fun addTransition(expression: IrCall, target: StateType) {
+        val from = parentStateId ?: return
+        val event = expression.findTypeArgument("on")?.classHierarchyName() ?: "UnknownEvent"
+        graph.referenceState(target.id, target.name)
+        graph.edges.add(Edge(from = from, to = target.id, event = event))
+        logger?.report(
+            CompilerMessageSeverity.INFO,
+            "KSM: transition [$from] --[$event]--> [${target.name}]",
+        )
+    }
 }
 
 class EffectContributorDslVisitor(private val graph: Graph) : IrVisitorVoid() {
-
-    private var currentState: String? = null
 
     override fun visitElement(element: IrElement) {
         element.acceptChildrenVoid(this)
     }
 
     override fun visitCall(expression: IrCall) {
-        // Recurse first so that when we process "effect", currentState has already been set
-        // by the "onEnter" child call below.
-        super.visitCall(expression)
         when (expression.symbol.owner.name.asString()) {
-            "onEnter" -> {
-                // IrGenerationExtension runs before inline expansion, so S::class is not yet a
-                // literal IrClassReference. Read the reified type argument directly instead.
-                val typeArg = expression.typeArguments.firstOrNull()
-                currentState = typeArg?.classHierarchyName() ?: "UnknownState"
-                logger?.report(
-                    CompilerMessageSeverity.INFO,
-                    "KSM effects: onEnter [$currentState]",
-                )
-            }
             "effect" -> {
-                val state = currentState ?: "UnknownState"
+                val state = expression.findTypeArgument("onEnter")?.stateType()
+                    ?: StateType("UnknownState", "UnknownState")
                 val bodyArg = expression.arguments.lastOrNull()
                 val effectName =
                     (bodyArg as? IrFunctionReference)?.symbol?.owner?.name?.asString() ?: "λ"
                 logger?.report(
                     CompilerMessageSeverity.INFO,
-                    "KSM effects: effect[$effectName] for state [$state]",
+                    "KSM effects: effect[$effectName] for state [${state.name}]",
                 )
-                graph.effects.getOrPut(state) { mutableListOf() }.add(StateEffect(effectName, false))
+                graph.referenceState(state.id, state.name)
+                graph.effects.getOrPut(state.id) { mutableListOf() }
+                    .add(StateEffect(effectName, false))
             }
         }
+        super.visitCall(expression)
     }
 }
 
@@ -178,12 +173,44 @@ object MermaidWriter {
         sb.appendLine("---")
         sb.appendLine("stateDiagram-v2")
 
+        val hasHierarchy = graph.stateDeclarations.values.any { it.parentId != null }
+        val hasDuplicateStateNames = graph.stateNames.values
+            .groupingBy { it.substringAfterLast(".") }
+            .eachCount()
+            .values
+            .any { it > 1 }
+        val useIdentifiers = hasHierarchy || hasDuplicateStateNames
+        val identifiers = if (useIdentifiers) stateIdentifiers(graph) else emptyMap()
+
+        if (hasHierarchy) {
+            val children = graph.stateDeclarations.values.groupBy { it.parentId }
+            for (state in children[null].orEmpty()) {
+                appendState(sb, state.id, graph, children, identifiers, 1)
+            }
+            for ((stateId, name) in graph.stateNames) {
+                if (stateId !in graph.stateDeclarations) {
+                    val identifier = identifiers.getValue(stateId)
+                    val label = name.substringAfterLast(".")
+                    appendSimpleState(sb, identifier, label, 1)
+                }
+            }
+        } else if (hasDuplicateStateNames) {
+            for ((stateId, name) in graph.stateNames) {
+                val identifier = identifiers.getValue(stateId)
+                val label = name.substringAfterLast(".")
+                appendSimpleState(sb, identifier, label, 1)
+            }
+        }
+
         for (edge in graph.edges) {
-            sb.appendLine("    ${edge.from} --> ${edge.to}: ${edge.event}")
+            val from = if (useIdentifiers) identifiers[edge.from] ?: edge.from else graph.stateName(edge.from)
+            val to = if (useIdentifiers) identifiers[edge.to] ?: edge.to else graph.stateName(edge.to)
+            sb.appendLine("    $from --> $to: ${edge.event}")
         }
 
         for ((state, effects) in graph.effects) {
-            sb.appendLine("    note right of $state")
+            val stateId = if (useIdentifiers) identifiers[state] ?: state else graph.stateName(state)
+            sb.appendLine("    note right of $stateId")
             for (effect in effects) {
                 val cancelStr = if (effect.hasCancel) " ↩" else ""
                 sb.appendLine("        ${effect.name}﹙﹚$cancelStr")
@@ -193,6 +220,101 @@ object MermaidWriter {
 
         return sb.toString()
     }
+
+    private fun appendState(
+        output: StringBuilder,
+        stateId: String,
+        graph: Graph,
+        children: Map<String?, List<StateDeclaration>>,
+        identifiers: Map<String, String>,
+        depth: Int,
+    ) {
+        val state = graph.stateDeclarations.getValue(stateId)
+        val nested = children[stateId].orEmpty()
+        val indent = "    ".repeat(depth)
+        val identifier = identifiers.getValue(stateId)
+        val label = state.name.substringAfterLast(".")
+
+        if (nested.isEmpty()) {
+            appendSimpleState(output, identifier, label, depth)
+            return
+        }
+
+        val declaration = if (identifier == label) identifier else "\"$label\" as $identifier"
+        output.appendLine("${indent}state $declaration {")
+        nested.forEach { appendState(output, it.id, graph, children, identifiers, depth + 1) }
+        output.appendLine("$indent}")
+    }
+
+    private fun appendSimpleState(
+        output: StringBuilder,
+        identifier: String,
+        label: String,
+        depth: Int,
+    ) {
+        val indent = "    ".repeat(depth)
+        if (identifier == label) {
+            output.appendLine("$indent$identifier")
+        } else {
+            output.appendLine("${indent}state \"$label\" as $identifier")
+        }
+    }
+
+    private fun stateIdentifiers(graph: Graph): Map<String, String> {
+        val bases = graph.stateNames.mapValues { (_, name) ->
+            name.replace(".", "_").replace(Regex("[^A-Za-z0-9_]"), "_")
+                .let { if (it.firstOrNull()?.isDigit() == true) "state_$it" else it }
+        }
+        val duplicateBases = bases.values.groupingBy { it }.eachCount()
+        return bases.mapValues { (id, base) ->
+            if (duplicateBases.getValue(base) == 1) base else "${base}_${encodeIdentifier(id)}"
+        }
+    }
+
+    private fun encodeIdentifier(value: String): String = buildString {
+        value.forEach { character ->
+            if (character.isLetterOrDigit()) {
+                append(character)
+            } else {
+                append('_')
+                append(character.code.toString(16))
+                append('_')
+            }
+        }
+    }
+}
+
+private data class StateType(val id: String, val name: String)
+
+private fun IrType.diagramName(): String {
+    val owner = (this as? IrSimpleType)?.classifierOrNull?.owner
+    return (owner as? IrDeclarationWithName)?.name?.asString() ?: render().substringAfterLast(".")
+}
+
+private fun IrCall.findTypeArgument(callName: String): IrType? {
+    var result: IrType? = null
+    acceptChildrenVoid(
+        object : IrVisitorVoid() {
+            override fun visitElement(element: IrElement) {
+                if (result == null) element.acceptChildrenVoid(this)
+            }
+
+            override fun visitCall(expression: IrCall) {
+                if (expression.symbol.owner.name.asString() == callName) {
+                    result = expression.typeArguments.firstOrNull()
+                } else {
+                    super.visitCall(expression)
+                }
+            }
+        }
+    )
+    return result
+}
+
+private fun IrType.stateType(): StateType {
+    val owner = (this as? IrSimpleType)?.classifierOrNull?.owner
+    val id = (owner as? IrDeclarationWithName)?.fqNameWhenAvailable?.asString() ?: render()
+    return StateType(id, classHierarchyName())
 }
 
 /**
@@ -215,6 +337,6 @@ private fun IrType.classHierarchyName(): String {
         if (parent == null || parent is IrPackageFragment) break
         current = parent
     }
-    names.removeAt(0)
+    if (names.size > 1) names.removeAt(0)
     return names.joinToString(".")
 }

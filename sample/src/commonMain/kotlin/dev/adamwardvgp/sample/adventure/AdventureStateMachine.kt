@@ -47,12 +47,11 @@ fun getAdventureStateMachine(
         }
     }
 
-    state<AdventureState.GameOver> {
+    state<AdventureState.Finished> {
       on<AdventureEvent.Restart>() transitionTo AdventureState.Start
-    }
 
-    state<AdventureState.Treasure> {
-      on<AdventureEvent.Restart>() transitionTo AdventureState.Start
+      state<AdventureState.GameOver> {}
+      state<AdventureState.Treasure> {}
     }
   }
 }
@@ -87,7 +86,9 @@ sealed interface AdventureState {
 
   @Serializable data class FightMonster(val monster: String) : AdventureState
 
-  @Serializable object Treasure : AdventureState
+  @Serializable sealed interface Finished : AdventureState
 
-  @Serializable data class GameOver(val reason: String) : AdventureState
+  @Serializable object Treasure : Finished
+
+  @Serializable data class GameOver(val reason: String) : Finished
 }

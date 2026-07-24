@@ -6,7 +6,7 @@ import com.tschuchort.compiletesting.PluginOption
 import com.tschuchort.compiletesting.SourceFile
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.Test
-import java.nio.file.Files
+import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -42,35 +42,69 @@ class KsmIrPluginTest {
         private const val nestedSource = """
             package coffee.adammakes.ksm.test
 
-            import coffee.adammakes.ksm.stateMachine
-            import kotlinx.coroutines.GlobalScope
+            sealed interface TestState
+            open class Parent : TestState
+            class Child : Parent()
+            object Done : TestState
 
-            sealed class TestState {
-                object Idle : TestState()
-                sealed class Active : TestState() {
-                    object Running : Active()
-                    object Paused : Active()
+            sealed interface TestEvent {
+                object ParentMove : TestEvent
+                object ChildMove : TestEvent
+                object Reset : TestEvent
+            }
+
+            class MachineBuilder<State : Any, Event : Any> {
+                inline fun <reified S : State> state(
+                    block: StateBuilder<S, State, Event>.() -> Unit,
+                ) {
+                    StateBuilder<S, State, Event>().block()
                 }
             }
 
-            sealed class TestEvent {
-                object Start : TestEvent()
-                object Pause : TestEvent()
+            class StateBuilder<From : State, State : Any, Event : Any> {
+                inline fun <reified S : From> state(
+                    block: StateBuilder<S, State, Event>.() -> Unit,
+                ) {
+                    StateBuilder<S, State, Event>().block()
+                }
+
+                inline fun <reified E : Event> on() = TransitionBuilder<E, State>()
             }
+
+            class TransitionBuilder<Event, State : Any> {
+                infix fun transitionTo(target: State) = Unit
+            }
+
+            inline fun <reified State : Any, reified Event : Any> stateMachine(
+                block: MachineBuilder<State, Event>.() -> Unit,
+            ) = MachineBuilder<State, Event>().block()
 
             val fsm = stateMachine<TestState, TestEvent> {
-                initialState = TestState.Idle
-                dispatchedOn = GlobalScope
-
-                state<TestState.Idle> {
-                    on<TestEvent.Start>() transitionTo TestState.Active.Running
+                state<Parent> {
+                    on<TestEvent.ParentMove>() transitionTo Done
+                    state<Child> {
+                        on<TestEvent.ChildMove>() transitionTo Done
+                    }
+                    on<TestEvent.Reset>() transitionTo Parent()
                 }
-
-                state<TestState.Active.Running> {
-                    on<TestEvent.Pause>() transitionTo TestState.Active.Paused
-                }
+                state<Done> {}
             }
         """
+
+        private fun outputDir(name: String): File =
+            File("build/test-output/$name").absoluteFile.apply {
+                deleteRecursively()
+                mkdirs()
+            }
+
+        @OptIn(ExperimentalCompilerApi::class)
+        private fun compilation(name: String): KotlinCompilation =
+            KotlinCompilation().apply {
+                workingDir = outputDir("compile-testing/$name")
+                jvmTarget = "21"
+                inheritClassPath = true
+                messageOutputStream = System.out
+            }
     }
 
     @OptIn(ExperimentalCompilerApi::class)
@@ -80,12 +114,9 @@ class KsmIrPluginTest {
             "TestStateMachine.kt", testSource.trimIndent()
         )
 
-        val compilation = KotlinCompilation().apply {
+        val compilation = compilation("registers").apply {
             sources = listOf(kotlinSource)
             compilerPluginRegistrars = listOf(KsmIrComponentRegistrar())
-            jvmTarget = "21"
-            inheritClassPath = true
-            messageOutputStream = System.out
         }
 
         val result = compilation.compile()
@@ -95,22 +126,19 @@ class KsmIrPluginTest {
     @OptIn(ExperimentalCompilerApi::class)
     @Test
     fun `plugin generates mermaid output file`() {
-        val outputDir = Files.createTempDirectory("ksm-ir-test").toFile()
+        val outputDir = outputDir("flat")
         try {
             val kotlinSource = SourceFile.kotlin(
                 "TestStateMachine.kt", testSource.trimIndent()
             )
 
-            val compilation = KotlinCompilation().apply {
+            val compilation = compilation("flat").apply {
                 sources = listOf(kotlinSource)
                 compilerPluginRegistrars = listOf(KsmIrComponentRegistrar())
                 commandLineProcessors = listOf(KsmCommandLineProcessor())
                 pluginOptions = listOf(
                     PluginOption("coffee.adammakes.ksm.ir", "outputDir", outputDir.absolutePath)
                 )
-                jvmTarget = "21"
-                inheritClassPath = true
-                messageOutputStream = System.out
             }
 
             val result = compilation.compile()
@@ -120,6 +148,10 @@ class KsmIrPluginTest {
             assertTrue(
                 mmdFiles != null && mmdFiles.isNotEmpty(),
                 "Expected at least one .mmd file to be generated in $outputDir"
+            )
+            assertEquals(
+                listOf("stateMachine_TestState.mmd"),
+                mmdFiles.map { it.name }.sorted(),
             )
 
             val content = mmdFiles.first().readText()
@@ -132,20 +164,17 @@ class KsmIrPluginTest {
 
     @OptIn(ExperimentalCompilerApi::class)
     @Test
-    fun `nested sealed states render with dot separator`() {
-        val outputDir = Files.createTempDirectory("ksm-nested-test").toFile()
+    fun `nested DSL renders hierarchy independently of Kotlin lexical nesting`() {
+        val outputDir = outputDir("nested")
         try {
             val kotlinSource = SourceFile.kotlin("NestedStateMachine.kt", nestedSource.trimIndent())
-            val compilation = KotlinCompilation().apply {
+            val compilation = compilation("nested").apply {
                 sources = listOf(kotlinSource)
                 compilerPluginRegistrars = listOf(KsmIrComponentRegistrar())
                 commandLineProcessors = listOf(KsmCommandLineProcessor())
                 pluginOptions = listOf(
                     PluginOption("coffee.adammakes.ksm.ir", "outputDir", outputDir.absolutePath)
                 )
-                jvmTarget = "21"
-                inheritClassPath = true
-                messageOutputStream = System.out
             }
 
             val result = compilation.compile()
@@ -156,12 +185,24 @@ class KsmIrPluginTest {
 
             val content = mmdFiles.first().readText()
             assertTrue(
-                content.contains("Idle --> Active.Running: Start"),
-                "Expected nested state with dot separator, got:\n$content",
+                content.contains(
+                    "    state Parent {\n" +
+                        "        Child\n" +
+                        "    }"
+                ),
+                "Expected compound parent and child states, got:\n$content",
             )
             assertTrue(
-                content.contains("Active.Running --> Active.Paused: Pause"),
-                "Expected nested-to-nested transition, got:\n$content",
+                content.contains("Parent --> Done: ParentMove"),
+                "Expected parent transition, got:\n$content",
+            )
+            assertTrue(
+                content.contains("Child --> Done: ChildMove"),
+                "Expected child transition, got:\n$content",
+            )
+            assertTrue(
+                content.contains("Parent --> Parent: Reset"),
+                "Expected parent attribution after nested declaration, got:\n$content",
             )
         } finally {
             outputDir.deleteRecursively()

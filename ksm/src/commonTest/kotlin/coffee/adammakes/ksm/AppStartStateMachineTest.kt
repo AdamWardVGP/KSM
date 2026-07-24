@@ -36,6 +36,9 @@ class AppStartStateMachineTest {
       state<Login> {
         on<LoginSuccess>() transitionTo GoToMain
         on<LoginFailed>() transitionTo Login.LoginFailed
+
+        state<Login.CredentialsPrompt> {}
+        state<Login.LoginFailed> {}
       }
     }
 

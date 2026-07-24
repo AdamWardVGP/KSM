@@ -54,13 +54,58 @@ val appLaunchStateMachine = stateMachine<AppStates, AppEvents> {
         on<AppEvents.EulaAccepted>() transitionTo AppStates.Login.CredentialsPrompt
     }
 
-    state<AppStates.Login.CredentialsPrompt> {
+    state<AppStates.Login> {
         on<AppEvents.LoginSuccess>() transitionTo AppStates.GoToMain
-        //Events can carry payloads and pass them into new states via transitionWith
-        on<AppEvents.LoginFailed>() transitionWith { _, event -> AppStates.Login.Failed(event.reason) }
+
+        state<AppStates.Login.CredentialsPrompt> {
+            //Events can carry payloads and pass them into new states via transitionWith
+            on<AppEvents.LoginFailed>() transitionWith { _, event ->
+                AppStates.Login.Failed(event.reason)
+            }
+        }
+
+        state<AppStates.Login.Failed> {}
     }
 }
 ```
+
+### Hierarchical states
+
+Nest `state` declarations when related states share behavior:
+
+```kotlin
+state<AdventureState.Finished> {
+    on<AdventureEvent.Restart>() transitionTo AdventureState.Start
+
+    state<AdventureState.GameOver> {}
+    state<AdventureState.Treasure> {}
+}
+```
+
+The machine still contains one concrete state such as `GameOver` or `Treasure`. If that leaf does
+not handle `Restart`, KSM walks outward to `Finished`. A child handler for the same event would take
+precedence over its parent.
+
+Hierarchy is declared by the DSL rather than inferred from every Kotlin interface a state
+implements. A child therefore needs to appear inside its parent's builder, including terminal
+children whose builders are empty.
+
+If upgrading code that previously relied on implicit supertype matching, move the concrete state
+declarations into the parent:
+
+```kotlin
+// Before: CredentialsPrompt matched Login only through Kotlin runtime type checks.
+state<AppStates.Login> { on<LoginSuccess>() transitionTo GoToMain }
+
+// After: the relationship is explicit and appears in generated diagrams.
+state<AppStates.Login> {
+    on<LoginSuccess>() transitionTo GoToMain
+    state<AppStates.Login.CredentialsPrompt> {}
+}
+```
+
+KSM hierarchy is single-region: there is always one active concrete leaf. It intentionally does
+not provide parallel/orthogonal regions or history pseudostates.
 
 ## 3. Monitor the FSM and dispatch events
 
@@ -89,7 +134,15 @@ val effectedMachine = appLaunchStateMachine.withEffects(coroutineScope) {
 }
 ```
 
-Each effect is a `suspend (State) -> Event`. Only one effect can be registered per state — registering a second one for the same state throws. When the machine leaves a state, an in-flight effect for that state is cancelled automatically. When an effect completes, the returned event is dispatched back into the machine.
+Each effect is a `suspend (State) -> Event`. Only one effect can be registered per state —
+registering a second one for the same state throws. When the machine leaves a state, an in-flight
+effect for that state is cancelled automatically. When an effect completes, the returned event is
+dispatched back into the machine.
+
+Hierarchical parents and children may each register one effect. Entering a child starts its
+registered parent and child effects. Moving between siblings preserves the parent effect while
+cancelling the exited child's effect; leaving the parent subtree cancels both. A transition to a
+new value of the same concrete state restarts the leaf effect without restarting its parents.
 
 Effects registered via `withEffects` also appear as notes in generated Mermaid diagrams.
 
@@ -105,6 +158,10 @@ Transition reducers should stay pure and are intended to function as a mapper
 Check out the detailed sample KMP app in the `/sample/` directory.
 
 This demonstrates exposing a `StateFlow` from a `ViewModel` to `@Composable` UI. Since states are data classes, they can also be marked `@Serializable` and stored in Android's `SavedStateHandle`—so the UI can pick up right where you left off.
+
+KSM does not keep hidden history or persistence data for a hierarchy. Additional workflow data and
+database snapshots belong in the application's concrete state, which can be supplied again as
+`initialState`.
 
 Launch the app to jump into a choose your own adventure style dialog flow. Can you defeat the monsters 🧌 and claim the treasure 👑? or will fate have a different plan for you 💀?
 
@@ -140,6 +197,9 @@ stateDiagram-v2
 ```
 
 💡 Tip: If the diagram looks wrong, your code might be wrong. These diagrams are a sanity check and a great way to review state transitions visually.
+
+Hierarchical declarations are emitted as nested Mermaid compound states, including transitions
+and effect notes declared on parent states.
 
 ---
 

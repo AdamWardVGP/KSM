@@ -3,6 +3,15 @@ config:
   layout: elk
 ---
 stateDiagram-v2
+    Start
+    DarkForest
+    OldBridge
+    CaveEntrance
+    FightMonster
+    state Finished {
+        GameOver
+        Treasure
+    }
     Start --> DarkForest: Begin
     DarkForest --> OldBridge: GoLeft
     DarkForest --> CaveEntrance: GoRight
@@ -12,8 +21,7 @@ stateDiagram-v2
     CaveEntrance --> DarkForest: RunAway
     FightMonster --> Treasure: Fight
     FightMonster --> GameOver: RunAway
-    GameOver --> Start: Restart
-    Treasure --> Start: Restart
+    Finished --> Start: Restart
     note right of Treasure
         rainCoins﹙﹚
     end note
