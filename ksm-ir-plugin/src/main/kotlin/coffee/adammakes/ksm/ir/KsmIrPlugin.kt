@@ -174,7 +174,13 @@ object MermaidWriter {
         sb.appendLine("stateDiagram-v2")
 
         val hasHierarchy = graph.stateDeclarations.values.any { it.parentId != null }
-        val identifiers = if (hasHierarchy) stateIdentifiers(graph) else emptyMap()
+        val hasDuplicateStateNames = graph.stateNames.values
+            .groupingBy { it.substringAfterLast(".") }
+            .eachCount()
+            .values
+            .any { it > 1 }
+        val useIdentifiers = hasHierarchy || hasDuplicateStateNames
+        val identifiers = if (useIdentifiers) stateIdentifiers(graph) else emptyMap()
 
         if (hasHierarchy) {
             val children = graph.stateDeclarations.values.groupBy { it.parentId }
@@ -188,16 +194,22 @@ object MermaidWriter {
                     appendSimpleState(sb, identifier, label, 1)
                 }
             }
+        } else if (hasDuplicateStateNames) {
+            for ((stateId, name) in graph.stateNames) {
+                val identifier = identifiers.getValue(stateId)
+                val label = name.substringAfterLast(".")
+                appendSimpleState(sb, identifier, label, 1)
+            }
         }
 
         for (edge in graph.edges) {
-            val from = if (hasHierarchy) identifiers[edge.from] ?: edge.from else graph.stateName(edge.from)
-            val to = if (hasHierarchy) identifiers[edge.to] ?: edge.to else graph.stateName(edge.to)
+            val from = if (useIdentifiers) identifiers[edge.from] ?: edge.from else graph.stateName(edge.from)
+            val to = if (useIdentifiers) identifiers[edge.to] ?: edge.to else graph.stateName(edge.to)
             sb.appendLine("    $from --> $to: ${edge.event}")
         }
 
         for ((state, effects) in graph.effects) {
-            val stateId = if (hasHierarchy) identifiers[state] ?: state else graph.stateName(state)
+            val stateId = if (useIdentifiers) identifiers[state] ?: state else graph.stateName(state)
             sb.appendLine("    note right of $stateId")
             for (effect in effects) {
                 val cancelStr = if (effect.hasCancel) " ↩" else ""

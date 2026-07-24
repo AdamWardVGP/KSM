@@ -82,12 +82,13 @@ class MermaidWriterTest {
     }
 
     @Test
-    fun `toMermaid disambiguates duplicate state names`() {
+    fun `toMermaid disambiguates duplicate flat state names for edges and notes`() {
         val graph = Graph("TestGraph")
-        graph.declareState("test.Parent", "Parent", null)
-        graph.declareState("first.Child", "Child", "test.Parent")
+        graph.declareState("first.Child", "Child", null)
         graph.declareState("second.Child", "Child", null)
         graph.edges.add(Edge("first.Child", "Move", "second.Child"))
+        graph.effects.getOrPut("second.Child") { mutableListOf() }
+            .add(StateEffect("notify", false))
 
         val mermaid = MermaidWriter.toMermaid(graph)
 
@@ -96,5 +97,6 @@ class MermaidWriterTest {
         kotlin.test.assertTrue(
             mermaid.contains("Child_first_2e_Child --> Child_second_2e_Child: Move")
         )
+        kotlin.test.assertTrue(mermaid.contains("note right of Child_second_2e_Child"))
     }
 }
