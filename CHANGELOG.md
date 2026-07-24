@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hierarchical effect lifetimes: parent and child effects can run together, parent effects survive
   sibling transitions, and exiting a subtree cancels its active effects.
 - Hierarchical Mermaid compound-state output from the IR compiler plugin.
+- Mermaid output now disambiguates duplicate flat state labels by emitting unique identifier
+  aliases, so transitions and effect notes reference unambiguous state IDs.
 
 ### Changed
 - **Breaking:** Parent transition fallback now requires explicit DSL nesting. KSM no longer scans
