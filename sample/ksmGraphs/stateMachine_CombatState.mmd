@@ -3,5 +3,6 @@ config:
   layout: elk
 ---
 stateDiagram-v2
+    [*] --> Fighting
     Fighting --> CombatState: Attack
     Fighting --> CombatState: Defend

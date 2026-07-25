@@ -18,6 +18,7 @@ data class Graph(
     val stateDeclarations: MutableMap<String, StateDeclaration> = linkedMapOf(),
     val stateNames: MutableMap<String, String> = linkedMapOf(),
     val composites: MutableMap<String, CompositeDeclaration> = linkedMapOf(),
+    var initialStateId: String? = null,
 ) {
     fun declareState(id: String, name: String, parentId: String?) {
         states.add(name)

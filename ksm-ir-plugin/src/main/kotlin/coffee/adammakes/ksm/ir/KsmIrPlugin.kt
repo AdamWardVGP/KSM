@@ -12,10 +12,13 @@ import org.jetbrains.kotlin.ir.declarations.IrDeclaration
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationWithName
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.declarations.IrPackageFragment
+import org.jetbrains.kotlin.ir.declarations.IrValueParameter
 import org.jetbrains.kotlin.ir.expressions.IrBlockBody
 import org.jetbrains.kotlin.ir.expressions.IrCall
+import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrFunctionExpression
 import org.jetbrains.kotlin.ir.expressions.IrFunctionReference
+import org.jetbrains.kotlin.ir.expressions.IrGetValue
 import org.jetbrains.kotlin.ir.expressions.IrReturn
 import org.jetbrains.kotlin.ir.types.IrSimpleType
 import org.jetbrains.kotlin.ir.types.IrType
@@ -95,6 +98,13 @@ class StateMachineDslVisitor(private val graph: Graph) : IrVisitorVoid() {
 
     override fun visitCall(expression: IrCall) {
         when (expression.symbol.owner.name.asString()) {
+            "<set-initialState>" -> {
+                val initial = expression.arguments.filterNotNull().lastOrNull()?.resolveStateType()
+                if (initial != null) {
+                    graph.referenceState(initial.id, initial.name)
+                    graph.initialStateId = initial.id
+                }
+            }
             "state" -> {
                 val state = expression.typeArguments.firstOrNull()?.stateType()
                     ?: StateType("UnknownState", "UnknownState")
@@ -219,12 +229,43 @@ object MermaidWriter {
      * children can be looked up. Defaults to empty for graphs with no composites.
      */
     fun toMermaid(graph: Graph, allGraphs: Map<String, Graph> = emptyMap()): String {
+        val hasHierarchy = graph.stateDeclarations.values.any { it.parentId != null }
+        // Wrapping the main graph in its own outer box adds a second level of compound nesting.
+        // Combined with same-typed hierarchical nesting (which already nests one level) plus an
+        // edge that reaches past a sibling into a nested state's child, this trips a real bug in
+        // mermaid's layout engine (verified by hand against the actual renderer) — so skip the
+        // wrap for graphs that already have hierarchy, rather than risk an unrenderable diagram.
+        val shouldWrapMainBox = graph.composites.isNotEmpty() && !hasHierarchy
+
         val sb = StringBuilder()
         sb.appendLine("---")
         sb.appendLine("config:")
         sb.appendLine("  layout: elk")
         sb.appendLine("---")
         sb.appendLine("stateDiagram-v2")
+
+        val mainContent = buildMainContent(graph)
+        if (shouldWrapMainBox) {
+            sb.appendLine("    state \"${graph.name}\" as main_box {")
+            sb.append(indented(mainContent))
+            sb.appendLine("    }")
+        } else {
+            sb.append(mainContent)
+        }
+
+        if (graph.composites.isNotEmpty()) {
+            val blueIds = mutableListOf<String>()
+            val greenIds = mutableListOf<String>()
+            appendComposites(sb, graph, allGraphs, blueIds, greenIds)
+            appendStrokeClasses(sb, blueIds, greenIds)
+        }
+
+        return sb.toString()
+    }
+
+    /** Everything that renders at the top level of a graph: states, initial marker, edges, effects. */
+    private fun buildMainContent(graph: Graph): String {
+        val sb = StringBuilder()
 
         val hasHierarchy = graph.stateDeclarations.values.any { it.parentId != null }
         val hasDuplicateStateNames = graph.stateNames.values
@@ -234,6 +275,9 @@ object MermaidWriter {
             .any { it > 1 }
         val useIdentifiers = hasHierarchy || hasDuplicateStateNames
         val identifiers = if (useIdentifiers) stateIdentifiers(graph) else emptyMap()
+
+        fun display(id: String): String =
+            if (useIdentifiers) identifiers[id] ?: id else graph.stateName(id)
 
         if (hasHierarchy) {
             val children = graph.stateDeclarations.values.groupBy { it.parentId }
@@ -255,15 +299,19 @@ object MermaidWriter {
             }
         }
 
+        graph.initialStateId?.let { initial -> sb.appendLine("    [*] --> ${display(initial)}") }
+
+        val exitWiredTransitions = graph.composites.values
+            .flatMapTo(mutableSetOf()) { declaration ->
+                declaration.exitWiring.map { declaration.ownerId to it.parentEventName }
+            }
         for (edge in graph.edges) {
-            val from = if (useIdentifiers) identifiers[edge.from] ?: edge.from else graph.stateName(edge.from)
-            val to = if (useIdentifiers) identifiers[edge.to] ?: edge.to else graph.stateName(edge.to)
-            sb.appendLine("    $from --> $to: ${edge.event}")
+            if (edge.from to edge.event in exitWiredTransitions) continue
+            sb.appendLine("    ${display(edge.from)} --> ${display(edge.to)}: ${edge.event}")
         }
 
         for ((state, effects) in graph.effects) {
-            val stateId = if (useIdentifiers) identifiers[state] ?: state else graph.stateName(state)
-            sb.appendLine("    note right of $stateId")
+            sb.appendLine("    note right of ${display(state)}")
             for (effect in effects) {
                 val cancelStr = if (effect.hasCancel) " ↩" else ""
                 sb.appendLine("        ${effect.name}﹙﹚$cancelStr")
@@ -271,29 +319,38 @@ object MermaidWriter {
             sb.appendLine("    end note")
         }
 
-        if (graph.composites.isNotEmpty()) {
-            appendComposites(sb, graph, allGraphs)
-        }
-
         return sb.toString()
     }
+
+    /** Prefixes every non-blank line of [content] with one indent level. */
+    private fun indented(content: String): String =
+        content.trimEnd('\n').lineSequence().joinToString("\n") { if (it.isEmpty()) it else "    $it" } + "\n"
 
     /**
      * Renders each composite's child FSM as a separate box (its real states, expanded) alongside
      * a mirror box of the parent states exit wiring targets, connected by the exit-wiring edges.
-     * The composite's owner state itself was already rendered above as a plain leaf node — no
-     * child internals are inlined there.
+     * The composite's owner state itself was already rendered in [buildMainContent] as a plain
+     * leaf node — no child internals are inlined there. Child-box and exit-box node/container ids
+     * are appended to [blueIds]/[greenIds] for uniform stroke-class styling.
      */
-    private fun appendComposites(output: StringBuilder, graph: Graph, allGraphs: Map<String, Graph>) {
+    private fun appendComposites(
+        output: StringBuilder,
+        graph: Graph,
+        allGraphs: Map<String, Graph>,
+        blueIds: MutableList<String>,
+        greenIds: MutableList<String>,
+    ) {
         for (declaration in graph.composites.values) {
             val childGraph = allGraphs[declaration.childGraphKey] ?: continue
             val childBaseIdentifiers = stateIdentifiers(childGraph)
             val childIdentifiers = childBaseIdentifiers.mapValues { (_, id) -> "child_$id" }
             val childChildren = childGraph.stateDeclarations.values.groupBy { it.parentId }
             val ownerToken = encodeIdentifier(declaration.ownerId)
+            val ownerLabel = graph.stateName(declaration.ownerId)
+            val childBoxId = "child_box_$ownerToken"
 
             output.appendLine()
-            output.appendLine("    state \"${childGraph.name}\" as child_box_$ownerToken {")
+            output.appendLine("    state \"$ownerLabel\" as $childBoxId {")
             for (state in childChildren[null].orEmpty()) {
                 appendState(output, state.id, childGraph, childChildren, childIdentifiers, 2)
             }
@@ -303,16 +360,23 @@ object MermaidWriter {
                     appendSimpleState(output, identifier, name.substringAfterLast("."), 2)
                 }
             }
+            childGraph.initialStateId?.let { initial ->
+                val identifier = childIdentifiers[initial] ?: initial
+                output.appendLine("        [*] --> $identifier")
+            }
             for (edge in childGraph.edges) {
                 val from = childIdentifiers[edge.from] ?: edge.from
                 val to = childIdentifiers[edge.to] ?: edge.to
                 output.appendLine("        $from --> $to: ${edge.event}")
             }
             output.appendLine("    }")
+            blueIds += childBoxId
+            blueIds += childIdentifiers.values
 
             if (declaration.exitWiring.isEmpty()) continue
 
-            output.appendLine("    state \"Exit targets\" as exit_box_$ownerToken {")
+            val exitBoxId = "exit_box_$ownerToken"
+            output.appendLine("    state \"Exit targets\" as $exitBoxId {")
             val mirrored = linkedMapOf<String, String>()
             val exitEdges = mutableListOf<String>()
             for (exit in declaration.exitWiring) {
@@ -332,7 +396,19 @@ object MermaidWriter {
             }
             output.appendLine("    }")
             exitEdges.forEach(output::appendLine)
+            greenIds += exitBoxId
+            greenIds += mirrored.values
         }
+    }
+
+    /** Blue stroke for composite child regions, green stroke for exit-target regions — uniform
+     * across every composite in the file; box labels (not color) tell multiple composites apart. */
+    private fun appendStrokeClasses(output: StringBuilder, blueIds: List<String>, greenIds: List<String>) {
+        output.appendLine()
+        output.appendLine("    classDef compositeChild stroke:#1565c0")
+        output.appendLine("    classDef exitTarget stroke:#2e7d32")
+        if (blueIds.isNotEmpty()) output.appendLine("    class ${blueIds.joinToString(",")} compositeChild")
+        if (greenIds.isNotEmpty()) output.appendLine("    class ${greenIds.joinToString(",")} exitTarget")
     }
 
     private fun appendState(
@@ -435,6 +511,18 @@ private fun IrType.stateType(): StateType {
     val owner = (this as? IrSimpleType)?.classifierOrNull?.owner
     val id = (owner as? IrDeclarationWithName)?.fqNameWhenAvailable?.asString() ?: render()
     return StateType(id, classHierarchyName())
+}
+
+/**
+ * Resolves the concrete state type an expression evaluates to. A reference to a value parameter
+ * only carries its *declared* type (e.g. `initialState: AdventureState = AdventureState.Start`
+ * types as the sealed base, not `Start`) — in that case, resolve through the parameter's default
+ * value instead, which is where DSL factory functions typically spell out the concrete literal.
+ */
+private fun IrExpression.resolveStateType(): StateType {
+    val param = (this as? IrGetValue)?.symbol?.owner as? IrValueParameter
+    val default = param?.defaultValue?.expression
+    return (default ?: this).type.stateType()
 }
 
 /**

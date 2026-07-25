@@ -12,6 +12,7 @@ stateDiagram-v2
         GameOver
         Treasure
     }
+    [*] --> Start
     Start --> DarkForest: Begin
     DarkForest --> OldBridge: GoLeft
     DarkForest --> CaveEntrance: GoRight
@@ -20,8 +21,6 @@ stateDiagram-v2
     CaveEntrance --> FightMonster: EnterCave
     CaveEntrance --> DarkForest: RunAway
     FightMonster --> GameOver: RunAway
-    FightMonster --> Treasure: MonsterDefeated
-    FightMonster --> GameOver: PlayerDefeated
     Finished --> Start: Restart
     note right of Treasure
         rainCoins﹙﹚
@@ -30,11 +29,12 @@ stateDiagram-v2
         rainSkulls﹙﹚
     end note
 
-    state "CombatState" as child_box_dev_2e_adamwardvgp_2e_sample_2e_adventure_2e_AdventureState_2e_FightMonster {
+    state "FightMonster" as child_box_dev_2e_adamwardvgp_2e_sample_2e_adventure_2e_AdventureState_2e_FightMonster {
         state "Fighting" as child_Fighting
         state "Won" as child_Won
         state "Lost" as child_Lost
         state "CombatState" as child_CombatState
+        [*] --> child_Fighting
         child_Fighting --> child_CombatState: Attack
         child_Fighting --> child_CombatState: Defend
     }
@@ -44,3 +44,8 @@ stateDiagram-v2
     }
     child_Won --> exit_dev_2e_adamwardvgp_2e_sample_2e_adventure_2e_AdventureState_2e_Treasure: MonsterDefeated
     child_Lost --> exit_dev_2e_adamwardvgp_2e_sample_2e_adventure_2e_AdventureState_2e_GameOver: PlayerDefeated
+
+    classDef compositeChild stroke:#1565c0
+    classDef exitTarget stroke:#2e7d32
+    class child_box_dev_2e_adamwardvgp_2e_sample_2e_adventure_2e_AdventureState_2e_FightMonster,child_Fighting,child_CombatState,child_Won,child_Lost compositeChild
+    class exit_box_dev_2e_adamwardvgp_2e_sample_2e_adventure_2e_AdventureState_2e_FightMonster,exit_dev_2e_adamwardvgp_2e_sample_2e_adventure_2e_AdventureState_2e_Treasure,exit_dev_2e_adamwardvgp_2e_sample_2e_adventure_2e_AdventureState_2e_GameOver exitTarget
