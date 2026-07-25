@@ -29,7 +29,6 @@ import androidx.compose.ui.unit.sp
 import dev.adamwardvgp.sample.adventure.AdventureEvent.Begin
 import dev.adamwardvgp.sample.adventure.AdventureEvent.CrossBridge
 import dev.adamwardvgp.sample.adventure.AdventureEvent.EnterCave
-import dev.adamwardvgp.sample.adventure.AdventureEvent.Fight
 import dev.adamwardvgp.sample.adventure.AdventureEvent.GoLeft
 import dev.adamwardvgp.sample.adventure.AdventureEvent.GoRight
 import dev.adamwardvgp.sample.adventure.AdventureEvent.Restart
@@ -73,16 +72,34 @@ fun AdventureScreen(adventureViewModel: AdventureViewModel) {
             ),
         )
 
-      is AdventureState.FightMonster ->
-        AdventureDialog(
-          title = "A Monster!",
-          text = "A ${(state as AdventureState.FightMonster).monster} attacks!",
-          buttons =
-            listOf(
-              "Fight" to { adventureViewModel.dispatchEvent(Fight()) },
-              "Run Away" to { adventureViewModel.dispatchEvent(RunAway) },
-            ),
-        )
+      is AdventureState.FightMonster -> {
+        val monster = (state as AdventureState.FightMonster).monster
+        val combat by adventureViewModel.combatState.collectAsState()
+        when (val fight = combat) {
+          is CombatState.Fighting ->
+            AdventureDialog(
+              title = "A Monster!",
+              text =
+                "A $monster attacks! You: ${fight.playerHp} HP — Monster: ${fight.monsterHp} HP",
+              buttons =
+                listOf(
+                  "Attack" to { adventureViewModel.dispatchCombatEvent(CombatEvent.Attack) },
+                  "Defend" to { adventureViewModel.dispatchCombatEvent(CombatEvent.Defend) },
+                  "Run Away" to { adventureViewModel.dispatchEvent(RunAway) },
+                ),
+            )
+          // Won/Lost are transient — exit wiring immediately moves the adventure on to
+          // Treasure/GameOver, so there's nothing meaningful to render for them here.
+          CombatState.Won,
+          CombatState.Lost,
+          null ->
+            AdventureDialog(
+              title = "A Monster!",
+              text = "A $monster attacks!",
+              buttons = emptyList(),
+            )
+        }
+      }
 
       AdventureState.Treasure ->
         AdventureDialog(

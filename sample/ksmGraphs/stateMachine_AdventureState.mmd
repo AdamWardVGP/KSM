@@ -19,8 +19,9 @@ stateDiagram-v2
     OldBridge --> GameOver: RunAway
     CaveEntrance --> FightMonster: EnterCave
     CaveEntrance --> DarkForest: RunAway
-    FightMonster --> Treasure: Fight
     FightMonster --> GameOver: RunAway
+    FightMonster --> Treasure: MonsterDefeated
+    FightMonster --> GameOver: PlayerDefeated
     Finished --> Start: Restart
     note right of Treasure
         rainCoins﹙﹚
@@ -28,3 +29,18 @@ stateDiagram-v2
     note right of GameOver
         rainSkulls﹙﹚
     end note
+
+    state "CombatState" as child_box_dev_2e_adamwardvgp_2e_sample_2e_adventure_2e_AdventureState_2e_FightMonster {
+        state "Fighting" as child_Fighting
+        state "Won" as child_Won
+        state "Lost" as child_Lost
+        state "CombatState" as child_CombatState
+        child_Fighting --> child_CombatState: Attack
+        child_Fighting --> child_CombatState: Defend
+    }
+    state "Exit targets" as exit_box_dev_2e_adamwardvgp_2e_sample_2e_adventure_2e_AdventureState_2e_FightMonster {
+        state "Treasure" as exit_dev_2e_adamwardvgp_2e_sample_2e_adventure_2e_AdventureState_2e_Treasure
+        state "GameOver" as exit_dev_2e_adamwardvgp_2e_sample_2e_adventure_2e_AdventureState_2e_GameOver
+    }
+    child_Won --> exit_dev_2e_adamwardvgp_2e_sample_2e_adventure_2e_AdventureState_2e_Treasure: MonsterDefeated
+    child_Lost --> exit_dev_2e_adamwardvgp_2e_sample_2e_adventure_2e_AdventureState_2e_GameOver: PlayerDefeated

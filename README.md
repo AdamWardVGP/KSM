@@ -107,6 +107,13 @@ state<AppStates.Login> {
 KSM hierarchy is single-region: there is always one active concrete leaf. It intentionally does
 not provide parallel/orthogonal regions or history pseudostates.
 
+### Composite states
+
+For a self-contained flow with its own `State`/`Event` types — reusable across multiple parents,
+rather than nested within one — embed it as a composite child instead. See
+[`docs/composite-states.md`](docs/composite-states.md) and the sample's combat mini-game for a
+worked example.
+
 ## 3. Monitor the FSM and dispatch events
 
 ```kotlin
