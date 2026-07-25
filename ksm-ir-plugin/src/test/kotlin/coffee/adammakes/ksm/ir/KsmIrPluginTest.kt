@@ -91,6 +91,137 @@ class KsmIrPluginTest {
             }
         """
 
+        private const val compositeSource = """
+            package coffee.adammakes.ksm.test
+
+            import coffee.adammakes.ksm.stateMachine
+            import kotlinx.coroutines.GlobalScope
+
+            sealed class AppState {
+                object Idle : AppState()
+                object UpdateFlow : AppState()
+                object Done : AppState()
+            }
+
+            sealed class AppEvent {
+                object StartUpdate : AppEvent()
+                object UpdateFinished : AppEvent()
+            }
+
+            sealed class UpdateState {
+                object Checking : UpdateState()
+                object Finished : UpdateState()
+            }
+
+            sealed class UpdateEvent {
+                object Go : UpdateEvent()
+            }
+
+            fun buildChild() = stateMachine<UpdateState, UpdateEvent> {
+                initialState = UpdateState.Checking
+                dispatchedOn = GlobalScope
+
+                state<UpdateState.Checking> {
+                    on<UpdateEvent.Go>() transitionTo UpdateState.Finished
+                }
+            }
+
+            val fsm = stateMachine<AppState, AppEvent> {
+                initialState = AppState.Idle
+                dispatchedOn = GlobalScope
+
+                state<AppState.Idle> {
+                    on<AppEvent.StartUpdate>() transitionTo AppState.UpdateFlow
+                }
+                state<AppState.UpdateFlow> {
+                    on<AppEvent.UpdateFinished>() transitionTo AppState.Done
+                    child(factory = { buildChild() }) {
+                        exit<UpdateState.Finished> { AppEvent.UpdateFinished }
+                    }
+                }
+                state<AppState.Done> {}
+            }
+        """
+
+        private const val compositeMultiSource = """
+            package coffee.adammakes.ksm.test
+
+            import coffee.adammakes.ksm.stateMachine
+            import kotlinx.coroutines.GlobalScope
+
+            sealed class UpdateState {
+                object Checking : UpdateState()
+                object Finished : UpdateState()
+            }
+
+            sealed class UpdateEvent {
+                object Go : UpdateEvent()
+            }
+
+            fun buildChild() = stateMachine<UpdateState, UpdateEvent> {
+                initialState = UpdateState.Checking
+                dispatchedOn = GlobalScope
+
+                state<UpdateState.Checking> {
+                    on<UpdateEvent.Go>() transitionTo UpdateState.Finished
+                }
+            }
+
+            sealed class AppState {
+                object Idle : AppState()
+                object UpdateFlow : AppState()
+                object Done : AppState()
+            }
+
+            sealed class AppEvent {
+                object StartUpdate : AppEvent()
+                object AppUpdateFinished : AppEvent()
+            }
+
+            val appFsm = stateMachine<AppState, AppEvent> {
+                initialState = AppState.Idle
+                dispatchedOn = GlobalScope
+
+                state<AppState.Idle> {
+                    on<AppEvent.StartUpdate>() transitionTo AppState.UpdateFlow
+                }
+                state<AppState.UpdateFlow> {
+                    on<AppEvent.AppUpdateFinished>() transitionTo AppState.Done
+                    child(factory = { buildChild() }) {
+                        exit<UpdateState.Finished> { AppEvent.AppUpdateFinished }
+                    }
+                }
+                state<AppState.Done> {}
+            }
+
+            sealed class SettingsState {
+                object Idle : SettingsState()
+                object UpdateFlow : SettingsState()
+                object Done : SettingsState()
+            }
+
+            sealed class SettingsEvent {
+                object StartUpdate : SettingsEvent()
+                object SettingsUpdateFinished : SettingsEvent()
+            }
+
+            val settingsFsm = stateMachine<SettingsState, SettingsEvent> {
+                initialState = SettingsState.Idle
+                dispatchedOn = GlobalScope
+
+                state<SettingsState.Idle> {
+                    on<SettingsEvent.StartUpdate>() transitionTo SettingsState.UpdateFlow
+                }
+                state<SettingsState.UpdateFlow> {
+                    on<SettingsEvent.SettingsUpdateFinished>() transitionTo SettingsState.Done
+                    child(factory = { buildChild() }) {
+                        exit<UpdateState.Finished> { SettingsEvent.SettingsUpdateFinished }
+                    }
+                }
+                state<SettingsState.Done> {}
+            }
+        """
+
         private fun outputDir(name: String): File =
             File("build/test-output/$name").absoluteFile.apply {
                 deleteRecursively()
@@ -203,6 +334,135 @@ class KsmIrPluginTest {
             assertTrue(
                 content.contains("Parent --> Parent: Reset"),
                 "Expected parent attribution after nested declaration, got:\n$content",
+            )
+        } finally {
+            outputDir.deleteRecursively()
+        }
+    }
+
+    @OptIn(ExperimentalCompilerApi::class)
+    @Test
+    fun `composite state produces one file per FSM, parent file rendering the child and exit wiring`() {
+        val outputDir = outputDir("composite")
+        try {
+            val kotlinSource = SourceFile.kotlin("CompositeStateMachine.kt", compositeSource.trimIndent())
+            val compilation = compilation("composite").apply {
+                sources = listOf(kotlinSource)
+                compilerPluginRegistrars = listOf(KsmIrComponentRegistrar())
+                commandLineProcessors = listOf(KsmCommandLineProcessor())
+                pluginOptions = listOf(
+                    PluginOption("coffee.adammakes.ksm.ir", "outputDir", outputDir.absolutePath)
+                )
+            }
+
+            val result = compilation.compile()
+            assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+
+            val mmdFiles = outputDir.listFiles { _, name -> name.endsWith(".mmd") }
+            assertTrue(mmdFiles != null && mmdFiles.isNotEmpty())
+            assertEquals(
+                listOf("stateMachine_AppState.mmd", "stateMachine_UpdateState.mmd"),
+                mmdFiles.map { it.name }.sorted(),
+                "Expected exactly one file per FSM definition",
+            )
+
+            val parentContent = mmdFiles.first { it.name == "stateMachine_AppState.mmd" }.readText()
+            assertTrue(
+                parentContent.contains("UpdateFlow --> Done: UpdateFinished"),
+                "Expected the composite owner's own transition, got:\n$parentContent",
+            )
+            assertTrue(
+                !parentContent.contains("state UpdateFlow {"),
+                "Composite owner must stay a plain, unexpanded node — got:\n$parentContent",
+            )
+            assertTrue(
+                parentContent.contains("state \"UpdateState\" as child_box_") &&
+                    parentContent.contains("Checking") &&
+                    parentContent.contains("Finished"),
+                "Expected the child's expanded states in the parent's file, got:\n$parentContent",
+            )
+            assertTrue(
+                parentContent.contains("state \"Exit targets\" as exit_box_"),
+                "Expected the exit-wiring mirror box, got:\n$parentContent",
+            )
+            assertTrue(
+                parentContent.contains(": UpdateFinished") &&
+                    parentContent.lines().count { it.contains(": UpdateFinished") } == 2,
+                "Expected both the owner's own transition and the exit-wiring edge, got:\n$parentContent",
+            )
+
+            val childContent = mmdFiles.first { it.name == "stateMachine_UpdateState.mmd" }.readText()
+            assertTrue(
+                childContent.contains("Checking --> Finished: Go"),
+                "Expected the child's own transition, got:\n$childContent",
+            )
+            assertTrue(
+                !childContent.contains("AppState") && !childContent.contains("UpdateFlow"),
+                "Child's standalone file must stay parent-agnostic, got:\n$childContent",
+            )
+        } finally {
+            outputDir.deleteRecursively()
+        }
+    }
+
+    @OptIn(ExperimentalCompilerApi::class)
+    @Test
+    fun `same child FSM embedded at two sites produces one child file and two distinctly-wired parent files`() {
+        val outputDir = outputDir("compositeMulti")
+        try {
+            val kotlinSource =
+                SourceFile.kotlin("CompositeMultiStateMachine.kt", compositeMultiSource.trimIndent())
+            val compilation = compilation("compositeMulti").apply {
+                sources = listOf(kotlinSource)
+                compilerPluginRegistrars = listOf(KsmIrComponentRegistrar())
+                commandLineProcessors = listOf(KsmCommandLineProcessor())
+                pluginOptions = listOf(
+                    PluginOption("coffee.adammakes.ksm.ir", "outputDir", outputDir.absolutePath)
+                )
+            }
+
+            val result = compilation.compile()
+            assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+
+            val mmdFiles = outputDir.listFiles { _, name -> name.endsWith(".mmd") }
+            assertTrue(mmdFiles != null && mmdFiles.isNotEmpty())
+            assertEquals(
+                listOf(
+                    "stateMachine_AppState.mmd",
+                    "stateMachine_SettingsState.mmd",
+                    "stateMachine_UpdateState.mmd",
+                ),
+                mmdFiles.map { it.name }.sorted(),
+                "Expected exactly one child file shared by both embeddings, plus one file per parent",
+            )
+
+            val appContent = mmdFiles.first { it.name == "stateMachine_AppState.mmd" }.readText()
+            val settingsContent = mmdFiles.first { it.name == "stateMachine_SettingsState.mmd" }.readText()
+
+            assertTrue(
+                appContent.contains(": AppUpdateFinished") &&
+                    !appContent.contains("SettingsUpdateFinished"),
+                "App's file must show its own exit wiring only, got:\n$appContent",
+            )
+            assertTrue(
+                settingsContent.contains(": SettingsUpdateFinished") &&
+                    !settingsContent.contains("AppUpdateFinished"),
+                "Settings' file must show its own exit wiring only, got:\n$settingsContent",
+            )
+
+            // Both embed the same child FSM — each parent's file expands it identically.
+            assertTrue(appContent.contains("state \"UpdateState\" as child_box_"))
+            assertTrue(settingsContent.contains("state \"UpdateState\" as child_box_"))
+
+            val childContent = mmdFiles.first { it.name == "stateMachine_UpdateState.mmd" }.readText()
+            assertTrue(
+                childContent.contains("Checking --> Finished: Go"),
+                "Expected the child's own transition, got:\n$childContent",
+            )
+            assertTrue(
+                !childContent.contains("AppState") && !childContent.contains("SettingsState"),
+                "Shared child's standalone file must stay parent-agnostic regardless of how many " +
+                    "parents embed it, got:\n$childContent",
             )
         } finally {
             outputDir.deleteRecursively()
