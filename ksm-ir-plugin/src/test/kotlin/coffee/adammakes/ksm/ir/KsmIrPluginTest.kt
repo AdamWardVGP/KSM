@@ -368,27 +368,26 @@ class KsmIrPluginTest {
 
             val parentContent = mmdFiles.first { it.name == "stateMachine_AppState.mmd" }.readText()
             assertTrue(
-                parentContent.contains("UpdateFlow --> Done: UpdateFinished"),
-                "Expected the composite owner's own transition, got:\n$parentContent",
+                !parentContent.contains("UpdateFlow --> Done: UpdateFinished"),
+                "Exit-wired transition must not be duplicated on the main graph, got:\n$parentContent",
             )
             assertTrue(
                 !parentContent.contains("state UpdateFlow {"),
                 "Composite owner must stay a plain, unexpanded node — got:\n$parentContent",
             )
             assertTrue(
-                parentContent.contains("state \"UpdateState\" as child_box_") &&
+                parentContent.contains("state \"UpdateFlow\" as child_box_") &&
                     parentContent.contains("Checking") &&
                     parentContent.contains("Finished"),
-                "Expected the child's expanded states in the parent's file, got:\n$parentContent",
+                "Expected the child's expanded states, boxed under the owner state's name, got:\n$parentContent",
             )
             assertTrue(
                 parentContent.contains("state \"Exit targets\" as exit_box_"),
                 "Expected the exit-wiring mirror box, got:\n$parentContent",
             )
             assertTrue(
-                parentContent.contains(": UpdateFinished") &&
-                    parentContent.lines().count { it.contains(": UpdateFinished") } == 2,
-                "Expected both the owner's own transition and the exit-wiring edge, got:\n$parentContent",
+                parentContent.lines().count { it.contains(": UpdateFinished") } == 1,
+                "Expected the exit-wiring edge to appear exactly once, got:\n$parentContent",
             )
 
             val childContent = mmdFiles.first { it.name == "stateMachine_UpdateState.mmd" }.readText()
@@ -450,9 +449,9 @@ class KsmIrPluginTest {
                 "Settings' file must show its own exit wiring only, got:\n$settingsContent",
             )
 
-            // Both embed the same child FSM — each parent's file expands it identically.
-            assertTrue(appContent.contains("state \"UpdateState\" as child_box_"))
-            assertTrue(settingsContent.contains("state \"UpdateState\" as child_box_"))
+            // Both embed the same child FSM — each parent's file expands it, boxed under its own owner state name.
+            assertTrue(appContent.contains("state \"UpdateFlow\" as child_box_"))
+            assertTrue(settingsContent.contains("state \"UpdateFlow\" as child_box_"))
 
             val childContent = mmdFiles.first { it.name == "stateMachine_UpdateState.mmd" }.readText()
             assertTrue(

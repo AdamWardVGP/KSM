@@ -5,6 +5,8 @@ import coffee.adammakes.ksm.ir.model.Graph
 import coffee.adammakes.ksm.ir.model.StateEffect
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class MermaidWriterTest {
     @Test
@@ -82,6 +84,35 @@ class MermaidWriterTest {
     }
 
     @Test
+    fun `toMermaid renders the initial-state marker for any graph`() {
+        val graph = Graph("TestGraph")
+        graph.edges.add(Edge("Initial", "Move", "Final"))
+        graph.initialStateId = "Initial"
+
+        val expected = """
+            ---
+            config:
+              layout: elk
+            ---
+            stateDiagram-v2
+                [*] --> Initial
+                Initial --> Final: Move
+        """.trimIndent()
+
+        assertEquals(expected, MermaidWriter.toMermaid(graph).trim())
+    }
+
+    @Test
+    fun `toMermaid leaves a non-composite graph unwrapped`() {
+        val graph = Graph("TestGraph")
+        graph.edges.add(Edge("Initial", "Move", "Final"))
+
+        val mermaid = MermaidWriter.toMermaid(graph)
+
+        assertFalse(mermaid.contains("as main_box"))
+    }
+
+    @Test
     fun `toMermaid renders a composite state as a collapsed node plus a child box and exit-wiring edges`() {
         val parent = Graph("AppState")
         parent.declareState("app.Idle", "Idle", null)
@@ -99,21 +130,32 @@ class MermaidWriterTest {
 
         val mermaid = MermaidWriter.toMermaid(parent, mapOf("child.UpdateState" to child))
 
-        // UpdateFlow is a plain node in the main graph — no child internals inlined there.
-        kotlin.test.assertTrue(mermaid.contains("    Idle --> UpdateFlow: StartUpdate"))
-        kotlin.test.assertTrue(mermaid.contains("    UpdateFlow --> Done: UpdateFinished"))
-        kotlin.test.assertFalse(mermaid.contains("state UpdateFlow {"))
+        // Parent's own states render boxed, separate from the composite/exit boxes.
+        assertTrue(mermaid.contains("state \"AppState\" as main_box {"))
+        assertTrue(mermaid.contains("Idle --> UpdateFlow: StartUpdate"))
+        assertFalse(mermaid.contains("state UpdateFlow {"))
 
-        // Child's real states, expanded, in their own box.
-        kotlin.test.assertTrue(mermaid.contains("state \"UpdateState\" as child_box_app_2e_UpdateFlow {"))
-        kotlin.test.assertTrue(mermaid.contains("child_Checking"))
-        kotlin.test.assertTrue(mermaid.contains("child_Done"))
-        kotlin.test.assertTrue(mermaid.contains("child_Checking --> child_Done: Go"))
+        // The exit-wired transition is shown once (via the exit box), not duplicated here.
+        assertFalse(mermaid.contains("UpdateFlow --> Done: UpdateFinished"))
+
+        // Child box is labelled with the owning composite state's name, not the child FSM's own name.
+        assertTrue(mermaid.contains("state \"UpdateFlow\" as child_box_app_2e_UpdateFlow {"))
+        assertTrue(mermaid.contains("child_Checking"))
+        assertTrue(mermaid.contains("child_Done"))
+        assertTrue(mermaid.contains("child_Checking --> child_Done: Go"))
 
         // Mirror box of the parent state(s) exit wiring targets, with the exit edge.
-        kotlin.test.assertTrue(mermaid.contains("state \"Exit targets\" as exit_box_app_2e_UpdateFlow {"))
-        kotlin.test.assertTrue(mermaid.contains("\"Done\" as exit_app_2e_Done"))
-        kotlin.test.assertTrue(mermaid.contains("child_Done --> exit_app_2e_Done: UpdateFinished"))
+        assertTrue(mermaid.contains("state \"Exit targets\" as exit_box_app_2e_UpdateFlow {"))
+        assertTrue(mermaid.contains("\"Done\" as exit_app_2e_Done"))
+        assertTrue(mermaid.contains("child_Done --> exit_app_2e_Done: UpdateFinished"))
+
+        // Uniform role-based stroke classes: blue for the child region, green for exit targets.
+        assertTrue(mermaid.contains("classDef compositeChild stroke:#1565c0"))
+        assertTrue(mermaid.contains("classDef exitTarget stroke:#2e7d32"))
+        assertTrue(mermaid.contains("class child_box_app_2e_UpdateFlow"))
+        assertTrue(mermaid.contains("compositeChild"))
+        assertTrue(mermaid.contains("class exit_box_app_2e_UpdateFlow"))
+        assertTrue(mermaid.contains("exitTarget"))
     }
 
     @Test
