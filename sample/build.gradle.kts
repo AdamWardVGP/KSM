@@ -35,7 +35,11 @@ kotlin {
       implementation(project(":ksm"))
       implementation(project(":ksm-effects"))
     }
-    commonTest.dependencies { implementation(libs.kotlin.test) }
+    commonTest.dependencies {
+      implementation(libs.kotlin.test)
+      implementation(libs.kotlinx.coroutines.test)
+      implementation(libs.turbine)
+    }
     jvmMain.dependencies {
       implementation(compose.desktop.currentOs)
       implementation(libs.kotlinx.coroutinesSwing)

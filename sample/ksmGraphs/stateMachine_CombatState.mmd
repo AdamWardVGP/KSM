@@ -3,6 +3,22 @@ config:
   layout: elk
 ---
 stateDiagram-v2
-    [*] --> Fighting
-    Fighting --> CombatState: Attack
-    Fighting --> CombatState: Defend
+    [*] --> PlayerTurn
+    PlayerTurn --> EnemyTelegraph: Attack
+    PlayerTurn --> EnemyTelegraph: Defend
+    PlayerTurn --> EnemyTelegraph: SpecialMove
+    EnemyTelegraph --> PlayerReact: TelegraphResolved
+    EnemyTelegraph --> Won: FightWon
+    EnemyTelegraph --> Lost: FightLost
+    PlayerReact --> EnemyResolve: Dodge
+    PlayerReact --> EnemyResolve: Block
+    PlayerReact --> EnemyResolve: Invisible
+    PlayerReact --> EnemyResolve: Stand
+    EnemyResolve --> PlayerTurn: RoundContinues
+    EnemyResolve --> Lost: FightLost
+    note right of EnemyTelegraph
+        λ﹙﹚
+    end note
+    note right of EnemyResolve
+        λ﹙﹚
+    end note

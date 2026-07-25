@@ -76,22 +76,83 @@ fun AdventureScreen(adventureViewModel: AdventureViewModel) {
         val monster = (state as AdventureState.FightMonster).monster
         val combat by adventureViewModel.combatState.collectAsState()
         when (val fight = combat) {
-          is CombatState.Fighting ->
+          is CombatState.PlayerTurn -> {
+            val context = fight.context
             AdventureDialog(
-              title = "A Monster!",
+              title = "A $monster attacks!",
               text =
-                "A $monster attacks! You: ${fight.playerHp} HP — Monster: ${fight.monsterHp} HP",
+                "You: ${context.playerHp} HP — ${context.enemyType.displayName}: ${context.monsterHp} HP",
               buttons =
-                listOf(
+                listOfNotNull(
                   "Attack" to { adventureViewModel.dispatchCombatEvent(CombatEvent.Attack) },
-                  "Defend" to { adventureViewModel.dispatchCombatEvent(CombatEvent.Defend) },
+                  if (!context.playerHasHealed) {
+                    "Defend (heal)" to
+                      {
+                        adventureViewModel.dispatchCombatEvent(CombatEvent.Defend)
+                      }
+                  } else {
+                    null
+                  },
+                  "Special Move" to
+                    {
+                      adventureViewModel.dispatchCombatEvent(CombatEvent.SpecialMove)
+                    },
                   "Run Away" to { adventureViewModel.dispatchEvent(RunAway) },
                 ),
             )
-          // Won/Lost are transient — exit wiring immediately moves the adventure on to
-          // Treasure/GameOver, so there's nothing meaningful to render for them here.
-          CombatState.Won,
-          CombatState.Lost,
+          }
+          is CombatState.PlayerReact -> {
+            val context = fight.context
+            val telegraphText =
+              if (fight.telegraphedHit == HitType.BIG) "The $monster winds up a big hit!"
+              else "The $monster strikes at you!"
+            AdventureDialog(
+              title = telegraphText,
+              text =
+                "You: ${context.playerHp} HP — ${context.enemyType.displayName}: ${context.monsterHp} HP",
+              buttons =
+                listOfNotNull(
+                  if (!context.specialLockout) {
+                    "Dodge" to { adventureViewModel.dispatchCombatEvent(CombatEvent.Dodge) }
+                  } else {
+                    null
+                  },
+                  if (!context.specialLockout) {
+                    "Block" to { adventureViewModel.dispatchCombatEvent(CombatEvent.Block) }
+                  } else {
+                    null
+                  },
+                  if (!context.playerHasInvisibility) {
+                    "Turn Invisible" to
+                      {
+                        adventureViewModel.dispatchCombatEvent(CombatEvent.Invisible)
+                      }
+                  } else {
+                    null
+                  },
+                  "Stand and Take It" to
+                    {
+                      adventureViewModel.dispatchCombatEvent(CombatEvent.Stand)
+                    },
+                ),
+            )
+          }
+          is CombatState.Won ->
+            AdventureDialog(
+              title = "Victory!",
+              text = fight.reason.narrate(won = true),
+              buttons = emptyList(),
+            )
+          is CombatState.Lost ->
+            AdventureDialog(
+              title = "Defeated...",
+              text = fight.reason.narrate(won = false),
+              buttons = emptyList(),
+            )
+          // EnemyTelegraph/EnemyResolve are transient — their onEnter effects resolve and
+          // dispatch onward immediately, so there's nothing meaningful to render for them.
+          is CombatState.EnemyTelegraph,
+          is CombatState.EnemyResolve,
           null ->
             AdventureDialog(
               title = "A Monster!",
@@ -130,6 +191,14 @@ fun AdventureScreen(adventureViewModel: AdventureViewModel) {
     EmojiRain(adventureViewModel.emojiRain)
   }
 }
+
+private fun Outcome.narrate(won: Boolean): String =
+  when (this) {
+    Outcome.FINAL_BLOW ->
+      if (won) "The monster got one desperate hit in before falling."
+      else "You landed one last hit, but it wasn't enough."
+    Outcome.MUTUAL_KILL -> "You and the monster take each other down together."
+  }
 
 private data class FallingEmoji(
   val emoji: String,
