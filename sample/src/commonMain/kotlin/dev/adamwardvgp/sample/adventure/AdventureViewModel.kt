@@ -14,9 +14,12 @@ import kotlinx.serialization.json.Json
 
 interface AdventureViewModel {
   val adventureState: StateFlow<AdventureState>
+  val combatState: StateFlow<CombatState?>
   val emojiRain: SharedFlow<String>
 
   fun dispatchEvent(event: AdventureEvent)
+
+  fun dispatchCombatEvent(event: CombatEvent)
 }
 
 class AdventureViewModelImpl(private val savedStateHandle: SavedStateHandle) :
@@ -30,8 +33,10 @@ class AdventureViewModelImpl(private val savedStateHandle: SavedStateHandle) :
   private val _emojiRain = MutableSharedFlow<String>(extraBufferCapacity = 64)
   override val emojiRain: SharedFlow<String> = _emojiRain
 
-  private val machine =
+  private val machines =
     getAdventureStateMachine(viewModelScope, restoredState ?: AdventureState.Start)
+  private val machine = machines.adventure
+  private val combat = machines.combat
 
   private val effectedMachine =
     machine.withEffects(viewModelScope) {
@@ -40,6 +45,7 @@ class AdventureViewModelImpl(private val savedStateHandle: SavedStateHandle) :
     }
 
   override val adventureState = effectedMachine.currentState
+  override val combatState = combat.activeChildState
 
   init {
     viewModelScope.launch {
@@ -50,6 +56,8 @@ class AdventureViewModelImpl(private val savedStateHandle: SavedStateHandle) :
   }
 
   override fun dispatchEvent(event: AdventureEvent) = effectedMachine.dispatchEvent(event)
+
+  override fun dispatchCombatEvent(event: CombatEvent) = combat.dispatch(event)
 
   private suspend fun rainCoins(
     @Suppress("UNUSED_PARAMETER") state: AdventureState.Treasure
