@@ -12,9 +12,11 @@ import org.jetbrains.kotlin.ir.declarations.IrDeclaration
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationWithName
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.declarations.IrPackageFragment
+import org.jetbrains.kotlin.ir.expressions.IrBlockBody
 import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.expressions.IrFunctionExpression
 import org.jetbrains.kotlin.ir.expressions.IrFunctionReference
+import org.jetbrains.kotlin.ir.expressions.IrReturn
 import org.jetbrains.kotlin.ir.types.IrSimpleType
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.classifierOrNull
@@ -40,7 +42,7 @@ class KsmIrGenerationExtension(private val outputDirPath: String?) : IrGeneratio
 
         graphs.values.forEach { graph ->
             val file = File(outputDir, "stateMachine_${graph.name}.mmd")
-            val mermaidOut = MermaidWriter.toMermaid(graph)
+            val mermaidOut = MermaidWriter.toMermaid(graph, graphs)
             logger?.report(CompilerMessageSeverity.INFO, "Mermaid output:\n$mermaidOut")
             file.writeText(mermaidOut)
         }
@@ -120,8 +122,30 @@ class StateMachineDslVisitor(private val graph: Graph) : IrVisitorVoid() {
                     ?: StateType("UnknownTarget", "UnknownTarget")
                 addTransition(expression, target)
             }
+            "child" -> {
+                handleChild(expression)
+                // Deliberately skip the default recursion below: the factory lambda's own
+                // stateMachine{} call is discovered independently (see KsmIrGenerationExtension's
+                // module-wide walk) and must NOT be inlined into this graph.
+                return
+            }
         }
         super.visitCall(expression)
+    }
+
+    private fun handleChild(expression: IrCall) {
+        val owner = parentStateId ?: return
+        val childStateType = expression.typeArguments.getOrNull(0) ?: return
+        graph.declareComposite(owner, childStateType.render())
+        logger?.report(
+            CompilerMessageSeverity.INFO,
+            "KSM: composite child [${childStateType.render()}] embedded in [$owner]",
+        )
+
+        // Second function-typed argument is the exit-wiring block; the first is the child
+        // factory, which we must not recurse into (see the comment at the call site).
+        expression.arguments.filterIsInstance<IrFunctionExpression>().getOrNull(1)
+            ?.function?.body?.accept(ExitWiringDslVisitor(graph, owner), null)
     }
 
     private fun addTransition(expression: IrCall, target: StateType) {
@@ -133,6 +157,30 @@ class StateMachineDslVisitor(private val graph: Graph) : IrVisitorVoid() {
             CompilerMessageSeverity.INFO,
             "KSM: transition [$from] --[$event]--> [${target.name}]",
         )
+    }
+}
+
+/** Visits an exit-wiring block (`child(...) { exit<X> { event } }`), recording each `exit<>`. */
+class ExitWiringDslVisitor(private val graph: Graph, private val ownerId: String) : IrVisitorVoid() {
+
+    override fun visitElement(element: IrElement) {
+        element.acceptChildrenVoid(this)
+    }
+
+    override fun visitCall(expression: IrCall) {
+        if (expression.symbol.owner.name.asString() == "exit") {
+            val exitState = expression.typeArguments.firstOrNull()?.stateType()
+            val eventName = expression.arguments.filterIsInstance<IrFunctionExpression>()
+                .firstOrNull()?.singleReturnType()?.classHierarchyName() ?: "UnknownEvent"
+            if (exitState != null) {
+                graph.addExitWiring(ownerId, exitState.id, exitState.name, eventName)
+                logger?.report(
+                    CompilerMessageSeverity.INFO,
+                    "KSM: exit wiring [${exitState.name}] --[$eventName]--> parent",
+                )
+            }
+        }
+        super.visitCall(expression)
     }
 }
 
@@ -165,7 +213,12 @@ class EffectContributorDslVisitor(private val graph: Graph) : IrVisitorVoid() {
 
 object MermaidWriter {
 
-    fun toMermaid(graph: Graph): String {
+    /**
+     * [allGraphs] resolves a composite's child graph by the key recorded in
+     * [Graph.composites] — pass the full set of graphs discovered in the module so composite
+     * children can be looked up. Defaults to empty for graphs with no composites.
+     */
+    fun toMermaid(graph: Graph, allGraphs: Map<String, Graph> = emptyMap()): String {
         val sb = StringBuilder()
         sb.appendLine("---")
         sb.appendLine("config:")
@@ -218,7 +271,68 @@ object MermaidWriter {
             sb.appendLine("    end note")
         }
 
+        if (graph.composites.isNotEmpty()) {
+            appendComposites(sb, graph, allGraphs)
+        }
+
         return sb.toString()
+    }
+
+    /**
+     * Renders each composite's child FSM as a separate box (its real states, expanded) alongside
+     * a mirror box of the parent states exit wiring targets, connected by the exit-wiring edges.
+     * The composite's owner state itself was already rendered above as a plain leaf node — no
+     * child internals are inlined there.
+     */
+    private fun appendComposites(output: StringBuilder, graph: Graph, allGraphs: Map<String, Graph>) {
+        for (declaration in graph.composites.values) {
+            val childGraph = allGraphs[declaration.childGraphKey] ?: continue
+            val childBaseIdentifiers = stateIdentifiers(childGraph)
+            val childIdentifiers = childBaseIdentifiers.mapValues { (_, id) -> "child_$id" }
+            val childChildren = childGraph.stateDeclarations.values.groupBy { it.parentId }
+            val ownerToken = encodeIdentifier(declaration.ownerId)
+
+            output.appendLine()
+            output.appendLine("    state \"${childGraph.name}\" as child_box_$ownerToken {")
+            for (state in childChildren[null].orEmpty()) {
+                appendState(output, state.id, childGraph, childChildren, childIdentifiers, 2)
+            }
+            for ((stateId, name) in childGraph.stateNames) {
+                if (stateId !in childGraph.stateDeclarations) {
+                    val identifier = childIdentifiers.getValue(stateId)
+                    appendSimpleState(output, identifier, name.substringAfterLast("."), 2)
+                }
+            }
+            for (edge in childGraph.edges) {
+                val from = childIdentifiers[edge.from] ?: edge.from
+                val to = childIdentifiers[edge.to] ?: edge.to
+                output.appendLine("        $from --> $to: ${edge.event}")
+            }
+            output.appendLine("    }")
+
+            if (declaration.exitWiring.isEmpty()) continue
+
+            output.appendLine("    state \"Exit targets\" as exit_box_$ownerToken {")
+            val mirrored = linkedMapOf<String, String>()
+            val exitEdges = mutableListOf<String>()
+            for (exit in declaration.exitWiring) {
+                val targetEdge = graph.edges.firstOrNull {
+                    it.from == declaration.ownerId && it.event == exit.parentEventName
+                }
+                val targetKey = targetEdge?.to ?: "event_${exit.parentEventName}"
+                val targetLabel = targetEdge?.let { graph.stateName(it.to) } ?: exit.parentEventName
+                val mirrorId = mirrored.getOrPut(targetKey) {
+                    val id = "exit_${encodeIdentifier(targetKey)}"
+                    appendSimpleState(output, id, targetLabel, 2)
+                    id
+                }
+                val childIdentifier = childIdentifiers[exit.childStateId]
+                    ?: "child_${encodeIdentifier(exit.childStateId)}"
+                exitEdges.add("    $childIdentifier --> $mirrorId: ${exit.parentEventName}")
+            }
+            output.appendLine("    }")
+            exitEdges.forEach(output::appendLine)
+        }
     }
 
     private fun appendState(
@@ -309,6 +423,12 @@ private fun IrCall.findTypeArgument(callName: String): IrType? {
         }
     )
     return result
+}
+
+/** For a single-expression lambda `{ SomeEvent }`, the static type of its returned expression. */
+private fun IrFunctionExpression.singleReturnType(): IrType? {
+    val body = function.body as? IrBlockBody ?: return null
+    return body.statements.filterIsInstance<IrReturn>().firstOrNull()?.value?.type
 }
 
 private fun IrType.stateType(): StateType {
