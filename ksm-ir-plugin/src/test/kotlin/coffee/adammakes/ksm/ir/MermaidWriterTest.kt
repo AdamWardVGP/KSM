@@ -180,6 +180,14 @@ class MermaidWriterTest {
         assertTrue(mermaid.contains("compositeChild"))
         assertTrue(mermaid.contains("class exit_box_app_2e_UpdateFlow"))
         assertTrue(mermaid.contains("exitTarget"))
+
+        // The collapsed owner node and the real exit-wiring target in the main graph itself carry
+        // the same stroke classes as their mirror boxes, so the highlighting isn't only visible in
+        // the composite/exit boxes.
+        val compositeChildClassLine = mermaid.lines().first { it.trim().startsWith("class ") && it.endsWith("compositeChild") }
+        assertTrue(compositeChildClassLine.contains(",UpdateFlow,") || compositeChildClassLine.contains(",UpdateFlow"))
+        val exitTargetClassLine = mermaid.lines().first { it.trim().startsWith("class ") && it.endsWith("exitTarget") }
+        assertTrue(exitTargetClassLine.contains(",Done,") || exitTargetClassLine.contains(",Done"))
     }
 
     @Test
