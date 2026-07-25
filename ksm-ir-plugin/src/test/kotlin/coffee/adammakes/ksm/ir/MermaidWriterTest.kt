@@ -113,6 +113,30 @@ class MermaidWriterTest {
     }
 
     @Test
+    fun `toMermaid skips the outer wrap when the graph also has same-typed hierarchical nesting`() {
+        // Regression test: wrapping a graph that already nests a hierarchical child two levels
+        // deep, combined with an edge that reaches from a sibling straight into that nested
+        // child, produces a diagram real mermaid renderers fail to lay out (verified by hand
+        // against the actual renderer). Skip the wrap rather than ship an unrenderable diagram.
+        val parent = Graph("AppState")
+        parent.declareState("app.Idle", "Idle", null)
+        parent.declareState("app.UpdateFlow", "UpdateFlow", null)
+        parent.declareState("app.Finished", "Finished", null)
+        parent.declareState("app.Done", "Done", "app.Finished")
+        parent.edges.add(Edge("app.Idle", "StartUpdate", "app.UpdateFlow"))
+        parent.edges.add(Edge("app.Idle", "Skip", "app.Done"))
+        parent.declareComposite("app.UpdateFlow", "child.UpdateState")
+
+        val child = Graph("UpdateState")
+        child.declareState("child.Checking", "Checking", null)
+
+        val mermaid = MermaidWriter.toMermaid(parent, mapOf("child.UpdateState" to child))
+
+        assertFalse(mermaid.contains("as main_box"))
+        assertTrue(mermaid.contains("state \"UpdateFlow\" as child_box_"))
+    }
+
+    @Test
     fun `toMermaid renders a composite state as a collapsed node plus a child box and exit-wiring edges`() {
         val parent = Graph("AppState")
         parent.declareState("app.Idle", "Idle", null)

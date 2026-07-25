@@ -3,33 +3,31 @@ config:
   layout: elk
 ---
 stateDiagram-v2
-    state "AdventureState" as main_box {
-        Start
-        DarkForest
-        OldBridge
-        CaveEntrance
-        FightMonster
-        state Finished {
-            GameOver
-            Treasure
-        }
-        [*] --> Start
-        Start --> DarkForest: Begin
-        DarkForest --> OldBridge: GoLeft
-        DarkForest --> CaveEntrance: GoRight
-        OldBridge --> Treasure: CrossBridge
-        OldBridge --> GameOver: RunAway
-        CaveEntrance --> FightMonster: EnterCave
-        CaveEntrance --> DarkForest: RunAway
-        FightMonster --> GameOver: RunAway
-        Finished --> Start: Restart
-        note right of Treasure
-            rainCoins﹙﹚
-        end note
-        note right of GameOver
-            rainSkulls﹙﹚
-        end note
+    Start
+    DarkForest
+    OldBridge
+    CaveEntrance
+    FightMonster
+    state Finished {
+        GameOver
+        Treasure
     }
+    [*] --> Start
+    Start --> DarkForest: Begin
+    DarkForest --> OldBridge: GoLeft
+    DarkForest --> CaveEntrance: GoRight
+    OldBridge --> Treasure: CrossBridge
+    OldBridge --> GameOver: RunAway
+    CaveEntrance --> FightMonster: EnterCave
+    CaveEntrance --> DarkForest: RunAway
+    FightMonster --> GameOver: RunAway
+    Finished --> Start: Restart
+    note right of Treasure
+        rainCoins﹙﹚
+    end note
+    note right of GameOver
+        rainSkulls﹙﹚
+    end note
 
     state "FightMonster" as child_box_dev_2e_adamwardvgp_2e_sample_2e_adventure_2e_AdventureState_2e_FightMonster {
         state "Fighting" as child_Fighting

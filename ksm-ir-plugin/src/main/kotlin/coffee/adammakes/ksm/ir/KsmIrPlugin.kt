@@ -229,7 +229,13 @@ object MermaidWriter {
      * children can be looked up. Defaults to empty for graphs with no composites.
      */
     fun toMermaid(graph: Graph, allGraphs: Map<String, Graph> = emptyMap()): String {
-        val hasComposites = graph.composites.isNotEmpty()
+        val hasHierarchy = graph.stateDeclarations.values.any { it.parentId != null }
+        // Wrapping the main graph in its own outer box adds a second level of compound nesting.
+        // Combined with same-typed hierarchical nesting (which already nests one level) plus an
+        // edge that reaches past a sibling into a nested state's child, this trips a real bug in
+        // mermaid's layout engine (verified by hand against the actual renderer) — so skip the
+        // wrap for graphs that already have hierarchy, rather than risk an unrenderable diagram.
+        val shouldWrapMainBox = graph.composites.isNotEmpty() && !hasHierarchy
 
         val sb = StringBuilder()
         sb.appendLine("---")
@@ -239,7 +245,7 @@ object MermaidWriter {
         sb.appendLine("stateDiagram-v2")
 
         val mainContent = buildMainContent(graph)
-        if (hasComposites) {
+        if (shouldWrapMainBox) {
             sb.appendLine("    state \"${graph.name}\" as main_box {")
             sb.append(indented(mainContent))
             sb.appendLine("    }")
@@ -247,7 +253,7 @@ object MermaidWriter {
             sb.append(mainContent)
         }
 
-        if (hasComposites) {
+        if (graph.composites.isNotEmpty()) {
             val blueIds = mutableListOf<String>()
             val greenIds = mutableListOf<String>()
             appendComposites(sb, graph, allGraphs, blueIds, greenIds)
