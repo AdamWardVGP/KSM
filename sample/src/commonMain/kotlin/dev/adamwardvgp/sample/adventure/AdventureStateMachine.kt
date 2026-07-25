@@ -4,6 +4,7 @@ import coffee.adammakes.ksm.CompositeHandle
 import coffee.adammakes.ksm.StateMachine
 import coffee.adammakes.ksm.stateMachine
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.serialization.Serializable
 
 /**
@@ -19,6 +20,7 @@ class AdventureMachines(
 fun getAdventureStateMachine(
   coroutineScope: CoroutineScope,
   initialState: AdventureState = AdventureState.Start,
+  emojiSink: MutableSharedFlow<String>? = null,
 ): AdventureMachines {
   lateinit var combat: CompositeHandle<AdventureEvent, CombatEvent, CombatState>
 
@@ -69,7 +71,7 @@ fun getAdventureStateMachine(
         // Fresh CombatStateMachine every time a fight is entered — the same definition is reused
         // for every monster encounter without carrying HP over between them.
         combat =
-          child(factory = { getCombatStateMachine(coroutineScope) }) {
+          child(factory = { getCombatStateMachine(coroutineScope, emojiSink = emojiSink) }) {
             exit<CombatState.Won> { AdventureEvent.MonsterDefeated }
             exit<CombatState.Lost> { AdventureEvent.PlayerDefeated }
           }

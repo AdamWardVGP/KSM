@@ -229,13 +229,13 @@ object MermaidWriter {
      * children can be looked up. Defaults to empty for graphs with no composites.
      */
     fun toMermaid(graph: Graph, allGraphs: Map<String, Graph> = emptyMap()): String {
-        val hasHierarchy = graph.stateDeclarations.values.any { it.parentId != null }
+        val display = mainDisplay(graph)
         // Wrapping the main graph in its own outer box adds a second level of compound nesting.
         // Combined with same-typed hierarchical nesting (which already nests one level) plus an
         // edge that reaches past a sibling into a nested state's child, this trips a real bug in
         // mermaid's layout engine (verified by hand against the actual renderer) — so skip the
         // wrap for graphs that already have hierarchy, rather than risk an unrenderable diagram.
-        val shouldWrapMainBox = graph.composites.isNotEmpty() && !hasHierarchy
+        val shouldWrapMainBox = graph.composites.isNotEmpty() && !display.hasHierarchy
 
         val sb = StringBuilder()
         sb.appendLine("---")
@@ -244,7 +244,7 @@ object MermaidWriter {
         sb.appendLine("---")
         sb.appendLine("stateDiagram-v2")
 
-        val mainContent = buildMainContent(graph)
+        val mainContent = buildMainContent(graph, display)
         if (shouldWrapMainBox) {
             sb.appendLine("    state \"${graph.name}\" as main_box {")
             sb.append(indented(mainContent))
@@ -256,17 +256,25 @@ object MermaidWriter {
         if (graph.composites.isNotEmpty()) {
             val blueIds = mutableListOf<String>()
             val greenIds = mutableListOf<String>()
-            appendComposites(sb, graph, allGraphs, blueIds, greenIds)
+            appendComposites(sb, graph, allGraphs, blueIds, greenIds, display)
             appendStrokeClasses(sb, blueIds, greenIds)
         }
 
         return sb.toString()
     }
 
-    /** Everything that renders at the top level of a graph: states, initial marker, edges, effects. */
-    private fun buildMainContent(graph: Graph): String {
-        val sb = StringBuilder()
+    /** Resolves a state id to how it's referenced in the main graph's own content — either its
+     * bare name, or a sanitized identifier when hierarchy/duplicate names force disambiguation. */
+    private class MainDisplay(
+        val hasHierarchy: Boolean,
+        val useIdentifiers: Boolean,
+        val identifiers: Map<String, String>,
+        private val graph: Graph,
+    ) {
+        fun resolve(id: String): String = if (useIdentifiers) identifiers[id] ?: id else graph.stateName(id)
+    }
 
+    private fun mainDisplay(graph: Graph): MainDisplay {
         val hasHierarchy = graph.stateDeclarations.values.any { it.parentId != null }
         val hasDuplicateStateNames = graph.stateNames.values
             .groupingBy { it.substringAfterLast(".") }
@@ -275,31 +283,34 @@ object MermaidWriter {
             .any { it > 1 }
         val useIdentifiers = hasHierarchy || hasDuplicateStateNames
         val identifiers = if (useIdentifiers) stateIdentifiers(graph) else emptyMap()
+        return MainDisplay(hasHierarchy, useIdentifiers, identifiers, graph)
+    }
 
-        fun display(id: String): String =
-            if (useIdentifiers) identifiers[id] ?: id else graph.stateName(id)
+    /** Everything that renders at the top level of a graph: states, initial marker, edges, effects. */
+    private fun buildMainContent(graph: Graph, display: MainDisplay): String {
+        val sb = StringBuilder()
 
-        if (hasHierarchy) {
+        if (display.hasHierarchy) {
             val children = graph.stateDeclarations.values.groupBy { it.parentId }
             for (state in children[null].orEmpty()) {
-                appendState(sb, state.id, graph, children, identifiers, 1)
+                appendState(sb, state.id, graph, children, display.identifiers, 1)
             }
             for ((stateId, name) in graph.stateNames) {
                 if (stateId !in graph.stateDeclarations) {
-                    val identifier = identifiers.getValue(stateId)
+                    val identifier = display.identifiers.getValue(stateId)
                     val label = name.substringAfterLast(".")
                     appendSimpleState(sb, identifier, label, 1)
                 }
             }
-        } else if (hasDuplicateStateNames) {
+        } else if (display.useIdentifiers) {
             for ((stateId, name) in graph.stateNames) {
-                val identifier = identifiers.getValue(stateId)
+                val identifier = display.identifiers.getValue(stateId)
                 val label = name.substringAfterLast(".")
                 appendSimpleState(sb, identifier, label, 1)
             }
         }
 
-        graph.initialStateId?.let { initial -> sb.appendLine("    [*] --> ${display(initial)}") }
+        graph.initialStateId?.let { initial -> sb.appendLine("    [*] --> ${display.resolve(initial)}") }
 
         val exitWiredTransitions = graph.composites.values
             .flatMapTo(mutableSetOf()) { declaration ->
@@ -307,11 +318,11 @@ object MermaidWriter {
             }
         for (edge in graph.edges) {
             if (edge.from to edge.event in exitWiredTransitions) continue
-            sb.appendLine("    ${display(edge.from)} --> ${display(edge.to)}: ${edge.event}")
+            sb.appendLine("    ${display.resolve(edge.from)} --> ${display.resolve(edge.to)}: ${edge.event}")
         }
 
         for ((state, effects) in graph.effects) {
-            sb.appendLine("    note right of ${display(state)}")
+            sb.appendLine("    note right of ${display.resolve(state)}")
             for (effect in effects) {
                 val cancelStr = if (effect.hasCancel) " ↩" else ""
                 sb.appendLine("        ${effect.name}﹙﹚$cancelStr")
@@ -330,8 +341,9 @@ object MermaidWriter {
      * Renders each composite's child FSM as a separate box (its real states, expanded) alongside
      * a mirror box of the parent states exit wiring targets, connected by the exit-wiring edges.
      * The composite's owner state itself was already rendered in [buildMainContent] as a plain
-     * leaf node — no child internals are inlined there. Child-box and exit-box node/container ids
-     * are appended to [blueIds]/[greenIds] for uniform stroke-class styling.
+     * leaf node — no child internals are inlined there, but its main-graph id is still added to
+     * [blueIds] so it carries the same stroke as its expanded child box. Likewise, any exit-wiring
+     * target that resolves to a real main-graph state is added to [greenIds].
      */
     private fun appendComposites(
         output: StringBuilder,
@@ -339,6 +351,7 @@ object MermaidWriter {
         allGraphs: Map<String, Graph>,
         blueIds: MutableList<String>,
         greenIds: MutableList<String>,
+        display: MainDisplay,
     ) {
         for (declaration in graph.composites.values) {
             val childGraph = allGraphs[declaration.childGraphKey] ?: continue
@@ -372,12 +385,14 @@ object MermaidWriter {
             output.appendLine("    }")
             blueIds += childBoxId
             blueIds += childIdentifiers.values
+            blueIds += display.resolve(declaration.ownerId)
 
             if (declaration.exitWiring.isEmpty()) continue
 
             val exitBoxId = "exit_box_$ownerToken"
             output.appendLine("    state \"Exit targets\" as $exitBoxId {")
             val mirrored = linkedMapOf<String, String>()
+            val mainGraphTargets = mutableSetOf<String>()
             val exitEdges = mutableListOf<String>()
             for (exit in declaration.exitWiring) {
                 val targetEdge = graph.edges.firstOrNull {
@@ -390,6 +405,7 @@ object MermaidWriter {
                     appendSimpleState(output, id, targetLabel, 2)
                     id
                 }
+                if (targetEdge != null) mainGraphTargets += display.resolve(targetEdge.to)
                 val childIdentifier = childIdentifiers[exit.childStateId]
                     ?: "child_${encodeIdentifier(exit.childStateId)}"
                 exitEdges.add("    $childIdentifier --> $mirrorId: ${exit.parentEventName}")
@@ -398,6 +414,7 @@ object MermaidWriter {
             exitEdges.forEach(output::appendLine)
             greenIds += exitBoxId
             greenIds += mirrored.values
+            greenIds += mainGraphTargets
         }
     }
 
@@ -407,8 +424,8 @@ object MermaidWriter {
         output.appendLine()
         output.appendLine("    classDef compositeChild stroke:#1565c0")
         output.appendLine("    classDef exitTarget stroke:#2e7d32")
-        if (blueIds.isNotEmpty()) output.appendLine("    class ${blueIds.joinToString(",")} compositeChild")
-        if (greenIds.isNotEmpty()) output.appendLine("    class ${greenIds.joinToString(",")} exitTarget")
+        if (blueIds.isNotEmpty()) output.appendLine("    class ${blueIds.distinct().joinToString(",")} compositeChild")
+        if (greenIds.isNotEmpty()) output.appendLine("    class ${greenIds.distinct().joinToString(",")} exitTarget")
     }
 
     private fun appendState(

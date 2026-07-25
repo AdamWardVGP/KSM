@@ -34,7 +34,11 @@ class AdventureViewModelImpl(private val savedStateHandle: SavedStateHandle) :
   override val emojiRain: SharedFlow<String> = _emojiRain
 
   private val machines =
-    getAdventureStateMachine(viewModelScope, restoredState ?: AdventureState.Start)
+    getAdventureStateMachine(
+      viewModelScope,
+      restoredState ?: AdventureState.Start,
+      emojiSink = _emojiRain,
+    )
   private val machine = machines.adventure
   private val combat = machines.combat
 
