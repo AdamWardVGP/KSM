@@ -14,6 +14,8 @@ repositories { mavenCentral() }
 
 kotlin {
   jvm { compilerOptions { jvmTarget.set(JvmTarget.JVM_11) } }
+  iosArm64()
+  iosSimulatorArm64()
 
   sourceSets {
     val commonMain by getting {

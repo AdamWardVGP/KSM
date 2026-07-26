@@ -15,6 +15,13 @@ ksm { outputDir = layout.projectDirectory.dir("ksmGraphs") }
 kotlin {
   androidTarget()
   jvm()
+  listOf(iosArm64(), iosSimulatorArm64()).forEach {
+    it.binaries.framework {
+      baseName = "KsmSampleShared"
+      isStatic = true
+      binaryOption("bundleId", "dev.adamwardvgp.sample.adventure.shared")
+    }
+  }
 
   sourceSets {
     androidMain.dependencies {

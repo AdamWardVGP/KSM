@@ -2,6 +2,19 @@
 
 A choose-your-own-adventure app demonstrating KSM in a Compose Multiplatform ViewModel.
 
+## Run on iOS
+
+The Xcode project is generated from `iosApp/project.yml` and is intentionally not versioned.
+
+```shell
+cd sample/iosApp
+xcodegen generate
+open KsmSample.xcodeproj
+```
+
+Select an iOS simulator and run the `KsmSample` scheme. The Xcode build invokes Gradle to build and
+embed the shared Kotlin framework.
+
 ```mermaid
 stateDiagram-v2
     Start
