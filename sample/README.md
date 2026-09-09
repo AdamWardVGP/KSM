@@ -15,6 +15,16 @@ open KsmSample.xcodeproj
 Select an iOS simulator and run the `KsmSample` scheme. The Xcode build invokes Gradle to build and
 embed the shared Kotlin framework.
 
+This diagram is generated at compile time by `ksm-ir-plugin` as a
+[Glyphic](https://github.com/MS-Teja/Glyphic) JSON document
+([`ksmGraphs/stateMachine_AdventureState.json`](ksmGraphs/stateMachine_AdventureState.json)),
+rendered here as SVG:
+
+![AdventureState diagram rendered by Glyphic](../docs/diagrams/adventure-state-glyphic.svg)
+
+<details>
+<summary>Before: what this looked like as a Mermaid diagram (pre-Glyphic)</summary>
+
 ```mermaid
 stateDiagram-v2
     Start
@@ -43,6 +53,8 @@ stateDiagram-v2
         rainSkulls﹙﹚
     end note
 ```
+
+</details>
 
 Before we get into the example though let's start with the basics.
 
