@@ -39,10 +39,15 @@ class KsmIrGenerationExtension(private val outputDirPath: String?) : IrGeneratio
         outputDir.mkdirs()
 
         graphs.values.forEach { graph ->
-            val file = File(outputDir, "stateMachine_${graph.name}.mmd")
+            val mermaidFile = File(outputDir, "stateMachine_${graph.name}.mmd")
             val mermaidOut = MermaidWriter.toMermaid(graph)
             logger?.report(CompilerMessageSeverity.INFO, "Mermaid output:\n$mermaidOut")
-            file.writeText(mermaidOut)
+            mermaidFile.writeText(mermaidOut)
+
+            val glyphicFile = File(outputDir, "stateMachine_${graph.name}.json")
+            val glyphicOut = GlyphicWriter.toGlyphic(graph)
+            logger?.report(CompilerMessageSeverity.INFO, "Glyphic output:\n$glyphicOut")
+            glyphicFile.writeText(glyphicOut)
         }
     }
 }
@@ -279,6 +284,141 @@ object MermaidWriter {
                 append('_')
                 append(character.code.toString(16))
                 append('_')
+            }
+        }
+    }
+}
+
+/**
+ * Emits state graphs as [Glyphic](https://github.com/MS-Teja/Glyphic) `"type": "state"` diagram
+ * documents — a strict JSON schema Glyphic renders to SVG/PNG without a browser.
+ *
+ * Glyphic node ids must match `^[a-zA-Z0-9_-]+$`, so the dotted fully-qualified state ids KSM
+ * tracks internally (e.g. `com.app.AppState.Login`) are sanitized into that alphabet, only
+ * falling back to a longer disambiguated form on collision. The human-readable class name is
+ * kept separate as `label`. Every state referenced by an edge or effect must appear in
+ * `states[]` (Glyphic validates this), so all known states are always emitted.
+ *
+ * Glyphic has no note/annotation primitive for state diagrams and gives every line of a node's
+ * label the same styling, so an effect can't just be a second line on its owning state's label
+ * without reading as more of that state's name. Instead each effect becomes its own small node —
+ * marked with a ⚡ prefix and reached by an "on enter" edge from its owning state — mirroring how
+ * Mermaid renders `withEffects` as a visually distinct note bubble off to the side.
+ */
+object GlyphicWriter {
+
+    fun toGlyphic(graph: Graph): String {
+        val children = graph.stateDeclarations.values.groupBy { it.parentId }
+        val compositeIds = graph.stateDeclarations.values.mapNotNull { it.parentId }.toSet()
+
+        val order = mutableListOf<String>()
+        val visited = mutableSetOf<String>()
+        val effectNodes = mutableListOf<EffectNode>()
+        val effectTransitions = mutableListOf<EffectTransition>()
+
+        fun addEffectNodes(stateId: String) {
+            val effects = graph.effects[stateId] ?: return
+            val parentId = graph.stateDeclarations[stateId]?.parentId
+            effects.forEachIndexed { index, effect ->
+                val effectId = "$stateId effect $index"
+                val cancelStr = if (effect.hasCancel) " ↩" else ""
+                effectNodes += EffectNode(effectId, "⚡ ${effect.name}﹙﹚$cancelStr", parentId)
+                effectTransitions += EffectTransition(stateId, effectId)
+                order += effectId
+                visited += effectId
+            }
+        }
+
+        fun visit(stateId: String) {
+            if (!visited.add(stateId)) return
+            order += stateId
+            children[stateId].orEmpty().forEach { visit(it.id) }
+            addEffectNodes(stateId)
+        }
+
+        children[null].orEmpty().forEach { visit(it.id) }
+        graph.stateNames.keys.forEach(::visit)
+        // Edge endpoints and effect targets may reference states that were never explicitly
+        // declared (e.g. a transitionTo target with no matching `state<T> { }` block). Glyphic
+        // requires every id used by a transition to appear in `states[]`, so backfill those too.
+        graph.edges.forEach { visit(it.from); visit(it.to) }
+        graph.effects.keys.forEach(::visit)
+
+        val identifiers = disambiguatedIdentifiers(order)
+        val effectLabels = effectNodes.associate { it.id to it.label }
+        val effectParents = effectNodes.associate { it.id to it.parentId }
+
+        val sb = StringBuilder()
+        sb.appendLine("{")
+        sb.appendLine("""  "type": "state",""")
+        sb.appendLine("""  "title": "${escapeJson(graph.name)}",""")
+        sb.appendLine("""  "direction": "TB",""")
+        sb.appendLine("""  "states": [""")
+        order.forEachIndexed { index, stateId ->
+            val label = effectLabels[stateId] ?: graph.stateName(stateId).substringAfterLast(".")
+            val parentId = if (stateId in effectLabels) effectParents.getValue(stateId) else {
+                graph.stateDeclarations[stateId]?.parentId
+            }
+            sb.append(
+                """    { "id": "${identifiers.getValue(stateId)}", "label": "${escapeJson(label)}""""
+            )
+            if (stateId in compositeIds) sb.append(""", "kind": "composite"""")
+            parentId?.let { sb.append(""", "parent": "${identifiers.getValue(it)}"""") }
+            sb.append(" }")
+            sb.appendLine(if (index != order.lastIndex) "," else "")
+        }
+        sb.appendLine("  ],")
+        sb.appendLine("""  "transitions": [""")
+        val allTransitions = graph.edges.map { it.from to it.to to it.event } +
+            effectTransitions.map { (it.from to it.to) to "on enter" }
+        allTransitions.forEachIndexed { index, (endpoints, label) ->
+            val (from, to) = endpoints
+            sb.append(
+                """    { "from": "${identifiers.getValue(from)}", """ +
+                    """"to": "${identifiers.getValue(to)}", "label": "${escapeJson(label)}" }"""
+            )
+            sb.appendLine(if (index != allTransitions.lastIndex) "," else "")
+        }
+        sb.appendLine("  ]")
+        sb.appendLine("}")
+        return sb.toString()
+    }
+
+    private data class EffectNode(val id: String, val label: String, val parentId: String?)
+    private data class EffectTransition(val from: String, val to: String)
+
+    /** Sanitizes each id into Glyphic's `[a-zA-Z0-9_-]` alphabet, disambiguating collisions. */
+    private fun disambiguatedIdentifiers(ids: List<String>): Map<String, String> {
+        val bases = ids.associateWith { sanitizeIdentifier(it) }
+        val duplicateBases = bases.values.groupingBy { it }.eachCount()
+        return ids.associateWith { id ->
+            val base = bases.getValue(id)
+            if (duplicateBases.getValue(base) == 1) base else "${base}_${encodeIdentifier(id)}"
+        }
+    }
+
+    private fun sanitizeIdentifier(value: String): String =
+        value.replace(Regex("[^A-Za-z0-9_-]"), "_").ifEmpty { "state" }
+
+    private fun encodeIdentifier(value: String): String = buildString {
+        value.forEach { character ->
+            if (character.isLetterOrDigit()) {
+                append(character)
+            } else {
+                append('_')
+                append(character.code.toString(16))
+                append('_')
+            }
+        }
+    }
+
+    private fun escapeJson(value: String): String = buildString {
+        value.forEach { character ->
+            when (character) {
+                '"' -> append("\\\"")
+                '\\' -> append("\\\\")
+                '\n' -> append("\\n")
+                else -> append(character)
             }
         }
     }

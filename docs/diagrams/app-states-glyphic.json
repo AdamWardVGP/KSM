@@ -1,0 +1,21 @@
+{
+  "type": "state",
+  "title": "AppStates",
+  "direction": "TB",
+  "states": [
+    { "id": "Uninitialized", "label": "Uninitialized" },
+    { "id": "RequestEula", "label": "RequestEula" },
+    { "id": "Login_CredentialsPrompt", "label": "Login.CredentialsPrompt" },
+    { "id": "ExitApp", "label": "ExitApp" },
+    { "id": "GoToMain", "label": "GoToMain" },
+    { "id": "Login_LoginFailed", "label": "Login.LoginFailed" }
+  ],
+  "transitions": [
+    { "from": "Uninitialized", "to": "RequestEula", "label": "EulaOutOfDate" },
+    { "from": "Uninitialized", "to": "Login_CredentialsPrompt", "label": "EulaAccepted" },
+    { "from": "RequestEula", "to": "Login_CredentialsPrompt", "label": "EulaAccepted" },
+    { "from": "RequestEula", "to": "ExitApp", "label": "EulaDenied" },
+    { "from": "Login_CredentialsPrompt", "to": "GoToMain", "label": "LoginSuccess" },
+    { "from": "Login_CredentialsPrompt", "to": "Login_LoginFailed", "label": "LoginFailed" }
+  ]
+}

@@ -1,0 +1,180 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="746.6666666666667" height="1304" viewBox="0 0 746.6666666666667 1304" role="img" aria-label="AdventureState">
+<title>AdventureState</title>
+<defs>
+
+        <marker id="arrow-solid" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="8" markerHeight="8" orient="auto">
+          <path d="M 0 0 L 12 6 L 0 12 z" fill="#64748b" />
+        </marker>
+        <marker id="arrow-open-solid" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="8" markerHeight="8" orient="auto">
+          <path d="M 0 1 L 11 6 L 0 11" fill="none" stroke="#64748b" stroke-width="2" />
+        </marker>
+        <marker id="arrow-dependency-solid" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="8" markerHeight="8" orient="auto">
+          <path d="M 0 1 L 11 6 L 0 11" fill="none" stroke="#64748b" stroke-width="2" stroke-dasharray="0" />
+        </marker>
+        <marker id="arrow-inheritance-solid" viewBox="0 0 14 14" refX="12" refY="7" markerWidth="10" markerHeight="10" orient="auto">
+          <path d="M 0 1 L 14 7 L 0 13 z" fill="#ffffff" stroke="#64748b" stroke-width="2" />
+        </marker>
+        <marker id="arrow-composition-solid" viewBox="0 0 18 14" refX="14" refY="7" markerWidth="12" markerHeight="10" orient="auto">
+          <path d="M 0 7 L 8 1 L 16 7 L 8 13 z" fill="#64748b" stroke="#64748b" stroke-width="2" />
+        </marker>
+        <marker id="arrow-aggregation-solid" viewBox="0 0 18 14" refX="14" refY="7" markerWidth="12" markerHeight="10" orient="auto">
+          <path d="M 0 7 L 8 1 L 16 7 L 8 13 z" fill="#ffffff" stroke="#64748b" stroke-width="2" />
+        </marker>
+        
+        <marker id="arrow-crow-solid" viewBox="0 0 24 20" refX="20" refY="10" markerWidth="14" markerHeight="14" orient="auto">
+          <path d="M 0 10 L 22 10 M 12 10 L 22 0 M 12 10 L 22 20" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </marker>
+        <marker id="arrow-crow-one-solid" viewBox="0 0 24 20" refX="20" refY="10" markerWidth="14" markerHeight="14" orient="auto">
+          <path d="M 0 10 L 22 10 M 12 10 L 22 0 M 12 10 L 22 20 M 12 2 L 12 18" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </marker>
+        <marker id="arrow-crow-zero-many-solid" viewBox="0 0 24 20" refX="20" refY="10" markerWidth="14" markerHeight="14" orient="auto">
+          <path d="M 0 10 L 4 10 M 12 10 L 22 10 M 12 10 L 22 0 M 12 10 L 22 20 M 4 10 a 4 4 0 1 1 8 0 a 4 4 0 1 1 -8 0" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </marker>
+        <marker id="arrow-zero-one-solid" viewBox="0 0 24 20" refX="20" refY="10" markerWidth="14" markerHeight="14" orient="auto">
+          <path d="M 0 10 L 8 10 M 16 10 L 22 10 M 8 10 a 4 4 0 1 1 8 0 a 4 4 0 1 1 -8 0 M 18 2 L 18 18" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </marker>
+        <marker id="arrow-one-one-solid" viewBox="0 0 24 20" refX="20" refY="10" markerWidth="14" markerHeight="14" orient="auto">
+          <path d="M 0 10 L 22 10 M 12 2 L 12 18 M 18 2 L 18 18" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </marker>
+      
+        <marker id="arrow-dashed" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="8" markerHeight="8" orient="auto">
+          <path d="M 0 0 L 12 6 L 0 12 z" fill="#64748b" />
+        </marker>
+        <marker id="arrow-open-dashed" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="8" markerHeight="8" orient="auto">
+          <path d="M 0 1 L 11 6 L 0 11" fill="none" stroke="#64748b" stroke-width="2" />
+        </marker>
+        <marker id="arrow-dependency-dashed" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="8" markerHeight="8" orient="auto">
+          <path d="M 0 1 L 11 6 L 0 11" fill="none" stroke="#64748b" stroke-width="2" stroke-dasharray="0" />
+        </marker>
+        <marker id="arrow-inheritance-dashed" viewBox="0 0 14 14" refX="12" refY="7" markerWidth="10" markerHeight="10" orient="auto">
+          <path d="M 0 1 L 14 7 L 0 13 z" fill="#ffffff" stroke="#64748b" stroke-width="2" />
+        </marker>
+        <marker id="arrow-composition-dashed" viewBox="0 0 18 14" refX="14" refY="7" markerWidth="12" markerHeight="10" orient="auto">
+          <path d="M 0 7 L 8 1 L 16 7 L 8 13 z" fill="#64748b" stroke="#64748b" stroke-width="2" />
+        </marker>
+        <marker id="arrow-aggregation-dashed" viewBox="0 0 18 14" refX="14" refY="7" markerWidth="12" markerHeight="10" orient="auto">
+          <path d="M 0 7 L 8 1 L 16 7 L 8 13 z" fill="#ffffff" stroke="#64748b" stroke-width="2" />
+        </marker>
+        
+        <marker id="arrow-crow-dashed" viewBox="0 0 24 20" refX="20" refY="10" markerWidth="14" markerHeight="14" orient="auto">
+          <path d="M 0 10 L 22 10 M 12 10 L 22 0 M 12 10 L 22 20" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </marker>
+        <marker id="arrow-crow-one-dashed" viewBox="0 0 24 20" refX="20" refY="10" markerWidth="14" markerHeight="14" orient="auto">
+          <path d="M 0 10 L 22 10 M 12 10 L 22 0 M 12 10 L 22 20 M 12 2 L 12 18" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </marker>
+        <marker id="arrow-crow-zero-many-dashed" viewBox="0 0 24 20" refX="20" refY="10" markerWidth="14" markerHeight="14" orient="auto">
+          <path d="M 0 10 L 4 10 M 12 10 L 22 10 M 12 10 L 22 0 M 12 10 L 22 20 M 4 10 a 4 4 0 1 1 8 0 a 4 4 0 1 1 -8 0" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </marker>
+        <marker id="arrow-zero-one-dashed" viewBox="0 0 24 20" refX="20" refY="10" markerWidth="14" markerHeight="14" orient="auto">
+          <path d="M 0 10 L 8 10 M 16 10 L 22 10 M 8 10 a 4 4 0 1 1 8 0 a 4 4 0 1 1 -8 0 M 18 2 L 18 18" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </marker>
+        <marker id="arrow-one-one-dashed" viewBox="0 0 24 20" refX="20" refY="10" markerWidth="14" markerHeight="14" orient="auto">
+          <path d="M 0 10 L 22 10 M 12 2 L 12 18 M 18 2 L 18 18" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </marker>
+      
+        <marker id="arrow-dotted" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="8" markerHeight="8" orient="auto">
+          <path d="M 0 0 L 12 6 L 0 12 z" fill="#64748b" />
+        </marker>
+        <marker id="arrow-open-dotted" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="8" markerHeight="8" orient="auto">
+          <path d="M 0 1 L 11 6 L 0 11" fill="none" stroke="#64748b" stroke-width="2" />
+        </marker>
+        <marker id="arrow-dependency-dotted" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="8" markerHeight="8" orient="auto">
+          <path d="M 0 1 L 11 6 L 0 11" fill="none" stroke="#64748b" stroke-width="2" stroke-dasharray="0" />
+        </marker>
+        <marker id="arrow-inheritance-dotted" viewBox="0 0 14 14" refX="12" refY="7" markerWidth="10" markerHeight="10" orient="auto">
+          <path d="M 0 1 L 14 7 L 0 13 z" fill="#ffffff" stroke="#64748b" stroke-width="2" />
+        </marker>
+        <marker id="arrow-composition-dotted" viewBox="0 0 18 14" refX="14" refY="7" markerWidth="12" markerHeight="10" orient="auto">
+          <path d="M 0 7 L 8 1 L 16 7 L 8 13 z" fill="#64748b" stroke="#64748b" stroke-width="2" />
+        </marker>
+        <marker id="arrow-aggregation-dotted" viewBox="0 0 18 14" refX="14" refY="7" markerWidth="12" markerHeight="10" orient="auto">
+          <path d="M 0 7 L 8 1 L 16 7 L 8 13 z" fill="#ffffff" stroke="#64748b" stroke-width="2" />
+        </marker>
+        
+        <marker id="arrow-crow-dotted" viewBox="0 0 24 20" refX="20" refY="10" markerWidth="14" markerHeight="14" orient="auto">
+          <path d="M 0 10 L 22 10 M 12 10 L 22 0 M 12 10 L 22 20" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </marker>
+        <marker id="arrow-crow-one-dotted" viewBox="0 0 24 20" refX="20" refY="10" markerWidth="14" markerHeight="14" orient="auto">
+          <path d="M 0 10 L 22 10 M 12 10 L 22 0 M 12 10 L 22 20 M 12 2 L 12 18" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </marker>
+        <marker id="arrow-crow-zero-many-dotted" viewBox="0 0 24 20" refX="20" refY="10" markerWidth="14" markerHeight="14" orient="auto">
+          <path d="M 0 10 L 4 10 M 12 10 L 22 10 M 12 10 L 22 0 M 12 10 L 22 20 M 4 10 a 4 4 0 1 1 8 0 a 4 4 0 1 1 -8 0" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </marker>
+        <marker id="arrow-zero-one-dotted" viewBox="0 0 24 20" refX="20" refY="10" markerWidth="14" markerHeight="14" orient="auto">
+          <path d="M 0 10 L 8 10 M 16 10 L 22 10 M 8 10 a 4 4 0 1 1 8 0 a 4 4 0 1 1 -8 0 M 18 2 L 18 18" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </marker>
+        <marker id="arrow-one-one-dotted" viewBox="0 0 24 20" refX="20" refY="10" markerWidth="14" markerHeight="14" orient="auto">
+          <path d="M 0 10 L 22 10 M 12 2 L 12 18 M 18 2 L 18 18" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </marker>
+      
+<filter id="glyphic-shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0f172a" flood-opacity="0.12"/></filter>
+</defs>
+<rect x="0" y="0" width="746.6666666666667" height="1304" fill="#ffffff"/>
+<g transform="translate(40, 40)">
+<rect x="223.66666666666669" y="431" width="400" height="377" rx="14" ry="14" fill="#f0f4ff" stroke="#3b82f6" stroke-width="1.5" filter="url(#glyphic-shadow)"/>
+<path d="M 353.6666666666667 1012 L 353.6666666666667 1096 L 235.50000000000003 1096 L 235.50000000000003 1140" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow-solid)"/>
+<path d="M 263.5 1140 L 263.5 1122 L 653.6666666666667 1122 L 653.6666666666667 304 L 604.3333333333333 304 L 604.3333333333333 286" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow-solid)"/>
+<path d="M 179.50000000000003 1140 L 179.50000000000003 1122 L 92.66666666666669 1122 L 92.66666666666669 84" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow-solid)"/>
+<path d="M 534.3333333333333 286 L 534.3333333333333 324 L 368.00000000000006 324 L 368.00000000000006 370 L 357 370 L 357 494" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow-solid)"/>
+<path d="M 569.3333333333333 286 L 569.3333333333333 304 L 585.8333333333335 304 L 585.8333333333335 370 L 537 370 L 537 494" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow-solid)"/>
+<path d="M 162.66666666666669 84 L 162.66666666666669 102 L 345.3333333333333 102 L 345.3333333333333 212" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow-solid)"/>
+<path d="M 127.66666666666669 84 L 127.66666666666669 1096 L 207.50000000000003 1096 L 207.50000000000003 1140" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow-solid)"/>
+<path d="M 322 286 L 322 304 L 225.33333333333334 304 L 225.33333333333334 370 L 310.3333333333333 370 L 310.33333333333337 494" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow-solid)"/>
+<path d="M 368.6666666666667 286 L 368.6666666666667 304 L 461.00000000000006 304 L 461.00000000000006 370 L 490.3333333333333 370 L 490.3333333333333 494" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow-solid)"/>
+<path d="M 353.6666666666667 810 L 353.6666666666667 938" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow-solid)"/>
+<path d="M 513.6666666666667 568 L 513.6666666666667 696" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow-solid)"/>
+<path d="M 333.6666666666667 568 L 333.6666666666667 696" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow-solid)"/>
+<rect x="283.6666666666667" y="940" width="140" height="70" rx="14" ry="14" fill="#f0f4ff" stroke="#3b82f6" stroke-width="1.5" filter="url(#glyphic-shadow)"/>
+<rect x="151.50000000000003" y="1142" width="140" height="70" rx="14" ry="14" fill="#f0f4ff" stroke="#3b82f6" stroke-width="1.5" filter="url(#glyphic-shadow)"/>
+<rect x="499.3333333333333" y="214" width="140" height="70" rx="14" ry="14" fill="#f0f4ff" stroke="#3b82f6" stroke-width="1.5" filter="url(#glyphic-shadow)"/>
+<rect x="57.666666666666686" y="12" width="140" height="70" rx="14" ry="14" fill="#f0f4ff" stroke="#3b82f6" stroke-width="1.5" filter="url(#glyphic-shadow)"/>
+<rect x="275.33333333333337" y="214" width="140" height="70" rx="14" ry="14" fill="#f0f4ff" stroke="#3b82f6" stroke-width="1.5" filter="url(#glyphic-shadow)"/>
+<rect x="443.6666666666667" y="496" width="140" height="70" rx="14" ry="14" fill="#f0f4ff" stroke="#3b82f6" stroke-width="1.5" filter="url(#glyphic-shadow)"/>
+<rect x="443.6666666666667" y="698" width="140" height="70" rx="14" ry="14" fill="#f0f4ff" stroke="#3b82f6" stroke-width="1.5" filter="url(#glyphic-shadow)"/>
+<rect x="263.6666666666667" y="496" width="140" height="70" rx="14" ry="14" fill="#f0f4ff" stroke="#3b82f6" stroke-width="1.5" filter="url(#glyphic-shadow)"/>
+<rect x="263.6666666666667" y="698" width="140" height="70" rx="14" ry="14" fill="#f0f4ff" stroke="#3b82f6" stroke-width="1.5" filter="url(#glyphic-shadow)"/>
+<g>
+<rect x="385.6666666666667" y="441" width="76" height="20" fill="#f0f4ff" stroke="none"/>
+<text x="423.6666666666667" y="451" text-anchor="middle" dominant-baseline="central" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="700" fill="#1e293b">Finished</text>
+</g>
+<g>
+<text x="353.6666666666667" y="975" text-anchor="middle" dominant-baseline="central" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="#1e293b">Start</text>
+</g>
+<g>
+<text x="221.50000000000003" y="1177" text-anchor="middle" dominant-baseline="central" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="#1e293b">DarkForest</text>
+</g>
+<g>
+<text x="569.3333333333333" y="249" text-anchor="middle" dominant-baseline="central" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="#1e293b">OldBridge</text>
+</g>
+<g>
+<text x="127.66666666666669" y="47" text-anchor="middle" dominant-baseline="central" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="#1e293b">CaveEntrance</text>
+</g>
+<g>
+<text x="345.33333333333337" y="249" text-anchor="middle" dominant-baseline="central" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="#1e293b">FightMonster</text>
+</g>
+<g>
+<text x="513.6666666666667" y="531" text-anchor="middle" dominant-baseline="central" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="#1e293b">GameOver</text>
+</g>
+<g>
+<text x="513.6666666666667" y="733" text-anchor="middle" dominant-baseline="central" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="#1e293b">⚡ rainSkulls﹙﹚</text>
+</g>
+<g>
+<text x="333.6666666666667" y="531" text-anchor="middle" dominant-baseline="central" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="#1e293b">Treasure</text>
+</g>
+<g>
+<text x="333.6666666666667" y="733" text-anchor="middle" dominant-baseline="central" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="#1e293b">⚡ rainCoins﹙﹚</text>
+</g>
+<text x="322.6666666666667" y="1073" text-anchor="middle" dominant-baseline="central" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="500" fill="#475569">Begin</text>
+<text x="619.6666666666667" y="871" text-anchor="middle" dominant-baseline="central" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="500" fill="#475569">GoLeft</text>
+<text x="55.666666666666686" y="609" text-anchor="middle" dominant-baseline="central" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="500" fill="#475569">GoRight</text>
+<text x="319.00000000000006" y="347" text-anchor="middle" dominant-baseline="central" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="500" fill="#475569">CrossBridge</text>
+<text x="548.8333333333335" y="347" text-anchor="middle" dominant-baseline="central" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="500" fill="#475569">RunAway</text>
+<text x="379.3333333333333" y="145" text-anchor="middle" dominant-baseline="central" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="500" fill="#475569">EnterCave</text>
+<text x="155.66666666666669" y="609" text-anchor="middle" dominant-baseline="central" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="500" fill="#475569">RunAway</text>
+<text x="194.33333333333334" y="347" text-anchor="middle" dominant-baseline="central" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="500" fill="#475569">Fight</text>
+<text x="424.00000000000006" y="347" text-anchor="middle" dominant-baseline="central" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="500" fill="#475569">RunAway</text>
+<text x="316.6666666666667" y="871" text-anchor="middle" dominant-baseline="central" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="500" fill="#475569">Restart</text>
+<text x="544.6666666666667" y="629" text-anchor="middle" dominant-baseline="central" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="500" fill="#475569">on enter</text>
+<text x="293.6666666666667" y="629" text-anchor="middle" dominant-baseline="central" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="500" fill="#475569">on enter</text>
+</g>
+</svg>

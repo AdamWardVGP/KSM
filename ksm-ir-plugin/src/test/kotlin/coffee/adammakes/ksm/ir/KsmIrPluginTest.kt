@@ -125,7 +125,7 @@ class KsmIrPluginTest {
 
     @OptIn(ExperimentalCompilerApi::class)
     @Test
-    fun `plugin generates mermaid output file`() {
+    fun `plugin generates both mermaid and glyphic output files`() {
         val outputDir = outputDir("flat")
         try {
             val kotlinSource = SourceFile.kotlin(
@@ -144,19 +144,33 @@ class KsmIrPluginTest {
             val result = compilation.compile()
             assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
 
-            val mmdFiles = outputDir.listFiles { _, name -> name.endsWith(".mmd") }
-            assertTrue(
-                mmdFiles != null && mmdFiles.isNotEmpty(),
-                "Expected at least one .mmd file to be generated in $outputDir"
-            )
             assertEquals(
-                listOf("stateMachine_TestState.mmd"),
-                mmdFiles.map { it.name }.sorted(),
+                listOf("stateMachine_TestState.json", "stateMachine_TestState.mmd"),
+                outputDir.listFiles()!!.map { it.name }.sorted(),
             )
 
-            val content = mmdFiles.first().readText()
-            assertTrue(content.contains("stateDiagram-v2"), "Expected stateDiagram-v2 in output")
-            assertTrue(content.contains("Initial --> Final: Move"), "Expected transition in output")
+            val mermaidContent = File(outputDir, "stateMachine_TestState.mmd").readText()
+            assertTrue(
+                mermaidContent.contains("stateDiagram-v2"),
+                "Expected stateDiagram-v2 in Mermaid output",
+            )
+            assertTrue(
+                mermaidContent.contains("Initial --> Final: Move"),
+                "Expected transition in Mermaid output",
+            )
+
+            val glyphicContent = File(outputDir, "stateMachine_TestState.json").readText()
+            assertTrue(
+                glyphicContent.contains(""""type": "state""""),
+                "Expected Glyphic state type in output",
+            )
+            assertTrue(
+                glyphicContent.contains(
+                    """"from": "coffee_adammakes_ksm_test_TestState_Initial", """ +
+                        """"to": "coffee_adammakes_ksm_test_TestState_Final", "label": "Move""""
+                ),
+                "Expected transition in Glyphic output",
+            )
         } finally {
             outputDir.deleteRecursively()
         }
@@ -180,28 +194,31 @@ class KsmIrPluginTest {
             val result = compilation.compile()
             assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
 
-            val mmdFiles = outputDir.listFiles { _, name -> name.endsWith(".mmd") }
-            assertTrue(mmdFiles != null && mmdFiles.isNotEmpty())
+            val jsonFiles = outputDir.listFiles { _, name -> name.endsWith(".json") }
+            assertTrue(jsonFiles != null && jsonFiles.isNotEmpty())
 
-            val content = mmdFiles.first().readText()
+            val content = jsonFiles.first().readText()
             assertTrue(
-                content.contains(
-                    "    state Parent {\n" +
-                        "        Child\n" +
-                        "    }"
-                ),
-                "Expected compound parent and child states, got:\n$content",
+                content.contains(""""kind": "composite""""),
+                "Expected Parent to be emitted as a composite state, got:\n$content",
             )
             assertTrue(
-                content.contains("Parent --> Done: ParentMove"),
+                content.contains(
+                    """"id": "coffee_adammakes_ksm_test_Child", "label": "Child", """ +
+                        """"parent": "coffee_adammakes_ksm_test_Parent""""
+                ),
+                "Expected Child to declare Parent as its parent, got:\n$content",
+            )
+            assertTrue(
+                content.contains(""""from": "coffee_adammakes_ksm_test_Parent", "to": "coffee_adammakes_ksm_test_Done", "label": "ParentMove""""),
                 "Expected parent transition, got:\n$content",
             )
             assertTrue(
-                content.contains("Child --> Done: ChildMove"),
+                content.contains(""""from": "coffee_adammakes_ksm_test_Child", "to": "coffee_adammakes_ksm_test_Done", "label": "ChildMove""""),
                 "Expected child transition, got:\n$content",
             )
             assertTrue(
-                content.contains("Parent --> Parent: Reset"),
+                content.contains(""""from": "coffee_adammakes_ksm_test_Parent", "to": "coffee_adammakes_ksm_test_Parent", "label": "Reset""""),
                 "Expected parent attribution after nested declaration, got:\n$content",
             )
         } finally {

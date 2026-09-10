@@ -16,7 +16,7 @@ In particular this state machine offers a few nice features:
 - 🏗️ Easy graph creation via DSL
 - 💽 Sealed classes as States, with Events that can carry payloads used to construct them
 - 🌊 Transitions observable via Flow
-- 🧜‍♀️ Exportable directly to Mermaid diagrams
+- 📐 Exportable directly to [Mermaid](https://mermaid.js.org/) and [Glyphic](https://github.com/MS-Teja/Glyphic) diagrams
 
 
 The state machine itself is:
@@ -144,7 +144,10 @@ registered parent and child effects. Moving between siblings preserves the paren
 cancelling the exited child's effect; leaving the parent subtree cancels both. A transition to a
 new value of the same concrete state restarts the leaf effect without restarting its parents.
 
-Effects registered via `withEffects` also appear as notes in generated Mermaid diagrams.
+Effects registered via `withEffects` also appear in generated diagrams: as a Mermaid note attached
+to their state, or, in Glyphic output, as a separate ⚡-marked node connected to their state by an
+"on enter" edge (Glyphic has no note/annotation primitive for state diagrams, so effects get their
+own node instead).
 
 ## Guidelines
 
@@ -169,7 +172,15 @@ Launch the app to jump into a choose your own adventure style dialog flow. Can y
 
 # 📊 Generate State Machine Diagrams
 
-All KSM state machines in your project can be exported as Mermaid diagrams at compile time via a Kotlin IR compiler plugin.
+All KSM state machines in your project can be exported as diagrams at compile time via a Kotlin IR
+compiler plugin. Two output formats are generated side by side:
+
+- **[Mermaid](https://mermaid.js.org/)** `stateDiagram-v2` text, which renders inline in
+  GitHub/GitLab markdown.
+- **[Glyphic](https://github.com/MS-Teja/Glyphic)** `"type": "state"` JSON, a strict schema Glyphic
+  renders to deterministic SVG/PNG/React-Flow output without a browser — see the
+  [Glyphic README](https://github.com/MS-Teja/Glyphic) for how to turn the generated `.json` files
+  into images.
 
 ## Setup
 
@@ -184,22 +195,73 @@ plugins {
 ksm { outputDir = layout.projectDirectory.dir("ksmGraphs") }
 ```
 
-That's it. Every `compileKotlin` task will automatically write `.mmd` files to `build/ksmGraphs/` — one per state machine found in your source.
-
-```mermaid
-stateDiagram-v2
-    Uninitialized --> RequestEula: EulaOutOfDate
-    Uninitialized --> Login.CredentialsPrompt: EulaAccepted
-    RequestEula --> Login.CredentialsPrompt: EulaAccepted
-    RequestEula --> ExitApp: EulaDenied
-    Login.CredentialsPrompt --> GoToMain: LoginSuccess
-    Login.CredentialsPrompt --> Login.LoginFailed: LoginFailed
-```
+That's it. Every `compileKotlin` task will automatically write both a `.mmd` (Mermaid) and a
+`.json` (Glyphic) file to `build/ksmGraphs/` per state machine found in your source.
 
 💡 Tip: If the diagram looks wrong, your code might be wrong. These diagrams are a sanity check and a great way to review state transitions visually.
 
-Hierarchical declarations are emitted as nested Mermaid compound states, including transitions
-and effect notes declared on parent states.
+Hierarchical declarations are emitted as nested Mermaid compound states, and as Glyphic composite
+states (`"kind": "composite"` with child states pointing back via `"parent"`). Effects registered
+via `withEffects` show up as a Mermaid note, and as a separate ⚡-marked Glyphic node connected by
+an "on enter" edge — see the rendered comparison below.
+
+## Mermaid vs. Glyphic, rendered side by side
+
+The same adventure sample state machine
+([`sample/ksmGraphs/stateMachine_AdventureState.mmd`](sample/ksmGraphs/stateMachine_AdventureState.mmd) /
+[`.json`](sample/ksmGraphs/stateMachine_AdventureState.json)), rendered by each tool. The Mermaid
+side uses its `layout: elk` config (same engine Glyphic uses internally), so both are laid out by
+ELK for a fair comparison:
+
+<table>
+<tr><th>Mermaid (ELK layout)</th><th>Glyphic</th></tr>
+<tr>
+<td>
+
+![AdventureState diagram rendered by Mermaid with the ELK layout](docs/diagrams/adventure-state-mermaid-elk.svg)
+
+</td>
+<td>
+
+![AdventureState diagram rendered by Glyphic](docs/diagrams/adventure-state-glyphic.svg)
+
+</td>
+</tr>
+</table>
+
+Mermaid draws `withEffects` registrations as a note bubble hanging off the state (the yellow
+boxes). Glyphic has no note/annotation primitive for state diagrams, so effects instead get their
+own small node marked with ⚡, connected back to their owning state by an "on enter" edge — visually
+distinct from a real event transition rather than just another line crammed into the state's own
+label.
+
+Glyphic also renders the flat `AppStates` example from earlier in this README:
+
+```json
+{
+  "type": "state",
+  "title": "AppStates",
+  "direction": "TB",
+  "states": [
+    { "id": "Uninitialized", "label": "Uninitialized" },
+    { "id": "RequestEula", "label": "RequestEula" },
+    { "id": "Login_CredentialsPrompt", "label": "Login.CredentialsPrompt" },
+    { "id": "ExitApp", "label": "ExitApp" },
+    { "id": "GoToMain", "label": "GoToMain" },
+    { "id": "Login_LoginFailed", "label": "Login.LoginFailed" }
+  ],
+  "transitions": [
+    { "from": "Uninitialized", "to": "RequestEula", "label": "EulaOutOfDate" },
+    { "from": "Uninitialized", "to": "Login_CredentialsPrompt", "label": "EulaAccepted" },
+    { "from": "RequestEula", "to": "Login_CredentialsPrompt", "label": "EulaAccepted" },
+    { "from": "RequestEula", "to": "ExitApp", "label": "EulaDenied" },
+    { "from": "Login_CredentialsPrompt", "to": "GoToMain", "label": "LoginSuccess" },
+    { "from": "Login_CredentialsPrompt", "to": "Login_LoginFailed", "label": "LoginFailed" }
+  ]
+}
+```
+
+![AppStates diagram rendered by Glyphic](docs/diagrams/app-states-glyphic.svg)
 
 ---
 

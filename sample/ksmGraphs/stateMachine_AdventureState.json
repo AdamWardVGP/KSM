@@ -1,0 +1,31 @@
+{
+  "type": "state",
+  "title": "AdventureState",
+  "direction": "TB",
+  "states": [
+    { "id": "dev_adamwardvgp_sample_adventure_AdventureState_Start", "label": "Start" },
+    { "id": "dev_adamwardvgp_sample_adventure_AdventureState_DarkForest", "label": "DarkForest" },
+    { "id": "dev_adamwardvgp_sample_adventure_AdventureState_OldBridge", "label": "OldBridge" },
+    { "id": "dev_adamwardvgp_sample_adventure_AdventureState_CaveEntrance", "label": "CaveEntrance" },
+    { "id": "dev_adamwardvgp_sample_adventure_AdventureState_FightMonster", "label": "FightMonster" },
+    { "id": "dev_adamwardvgp_sample_adventure_AdventureState_Finished", "label": "Finished", "kind": "composite" },
+    { "id": "dev_adamwardvgp_sample_adventure_AdventureState_GameOver", "label": "GameOver", "parent": "dev_adamwardvgp_sample_adventure_AdventureState_Finished" },
+    { "id": "dev_adamwardvgp_sample_adventure_AdventureState_GameOver_effect_0", "label": "⚡ rainSkulls﹙﹚", "parent": "dev_adamwardvgp_sample_adventure_AdventureState_Finished" },
+    { "id": "dev_adamwardvgp_sample_adventure_AdventureState_Treasure", "label": "Treasure", "parent": "dev_adamwardvgp_sample_adventure_AdventureState_Finished" },
+    { "id": "dev_adamwardvgp_sample_adventure_AdventureState_Treasure_effect_0", "label": "⚡ rainCoins﹙﹚", "parent": "dev_adamwardvgp_sample_adventure_AdventureState_Finished" }
+  ],
+  "transitions": [
+    { "from": "dev_adamwardvgp_sample_adventure_AdventureState_Start", "to": "dev_adamwardvgp_sample_adventure_AdventureState_DarkForest", "label": "Begin" },
+    { "from": "dev_adamwardvgp_sample_adventure_AdventureState_DarkForest", "to": "dev_adamwardvgp_sample_adventure_AdventureState_OldBridge", "label": "GoLeft" },
+    { "from": "dev_adamwardvgp_sample_adventure_AdventureState_DarkForest", "to": "dev_adamwardvgp_sample_adventure_AdventureState_CaveEntrance", "label": "GoRight" },
+    { "from": "dev_adamwardvgp_sample_adventure_AdventureState_OldBridge", "to": "dev_adamwardvgp_sample_adventure_AdventureState_Treasure", "label": "CrossBridge" },
+    { "from": "dev_adamwardvgp_sample_adventure_AdventureState_OldBridge", "to": "dev_adamwardvgp_sample_adventure_AdventureState_GameOver", "label": "RunAway" },
+    { "from": "dev_adamwardvgp_sample_adventure_AdventureState_CaveEntrance", "to": "dev_adamwardvgp_sample_adventure_AdventureState_FightMonster", "label": "EnterCave" },
+    { "from": "dev_adamwardvgp_sample_adventure_AdventureState_CaveEntrance", "to": "dev_adamwardvgp_sample_adventure_AdventureState_DarkForest", "label": "RunAway" },
+    { "from": "dev_adamwardvgp_sample_adventure_AdventureState_FightMonster", "to": "dev_adamwardvgp_sample_adventure_AdventureState_Treasure", "label": "Fight" },
+    { "from": "dev_adamwardvgp_sample_adventure_AdventureState_FightMonster", "to": "dev_adamwardvgp_sample_adventure_AdventureState_GameOver", "label": "RunAway" },
+    { "from": "dev_adamwardvgp_sample_adventure_AdventureState_Finished", "to": "dev_adamwardvgp_sample_adventure_AdventureState_Start", "label": "Restart" },
+    { "from": "dev_adamwardvgp_sample_adventure_AdventureState_GameOver", "to": "dev_adamwardvgp_sample_adventure_AdventureState_GameOver_effect_0", "label": "on enter" },
+    { "from": "dev_adamwardvgp_sample_adventure_AdventureState_Treasure", "to": "dev_adamwardvgp_sample_adventure_AdventureState_Treasure_effect_0", "label": "on enter" }
+  ]
+}
