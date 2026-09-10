@@ -10,13 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Support for iOS.
 
-### Changed
-- **Breaking:** `ksm-ir-plugin` now generates [Glyphic](https://github.com/MS-Teja/Glyphic)
-  `"type": "state"` JSON documents instead of Mermaid `stateDiagram-v2` text. Generated files are
-  now named `stateMachine_<Name>.json` (previously `.mmd`). Hierarchical states are emitted as
-  Glyphic composite/parent nodes, and effect names registered via `withEffects` are now appended
-  to their state's `label` instead of a Mermaid note (Glyphic has no note primitive for state
-  diagrams). State ids are sanitized to Glyphic's `[a-zA-Z0-9_-]` identifier alphabet.
+### Added
+- `ksm-ir-plugin` now additionally generates [Glyphic](https://github.com/MS-Teja/Glyphic)
+  `"type": "state"` JSON documents (`stateMachine_<Name>.json`) alongside the existing Mermaid
+  `stateDiagram-v2` output (`stateMachine_<Name>.mmd`, unchanged). Hierarchical states are emitted
+  as Glyphic composite/parent nodes. Glyphic has no note primitive for state diagrams, so effect
+  names registered via `withEffects` become their own ⚡-marked node connected to their state by an
+  "on enter" edge, rather than a note. State ids are sanitized to Glyphic's `[a-zA-Z0-9_-]`
+  identifier alphabet.
 
 ## [1.0.0] - 2026-07-24
 

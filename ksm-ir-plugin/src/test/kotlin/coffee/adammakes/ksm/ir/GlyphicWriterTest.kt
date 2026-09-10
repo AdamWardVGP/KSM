@@ -34,7 +34,7 @@ class GlyphicWriterTest {
     }
 
     @Test
-    fun `toGlyphic marks effects as functions using fullwidth parens`() {
+    fun `toGlyphic renders effects as separate nodes marked with a lightning bolt`() {
         val graph = Graph("TestGraph")
         graph.effects.getOrPut("Final") { mutableListOf() }.add(StateEffect("rainCoins", false))
         graph.effects.getOrPut("Final") { mutableListOf() }.add(StateEffect("stopMusic", true))
@@ -45,9 +45,13 @@ class GlyphicWriterTest {
               "title": "TestGraph",
               "direction": "TB",
               "states": [
-                { "id": "Final", "label": "Final\nrainCoins﹙﹚\nstopMusic﹙﹚ ↩" }
+                { "id": "Final", "label": "Final" },
+                { "id": "Final_effect_0", "label": "⚡ rainCoins﹙﹚" },
+                { "id": "Final_effect_1", "label": "⚡ stopMusic﹙﹚ ↩" }
               ],
               "transitions": [
+                { "from": "Final", "to": "Final_effect_0", "label": "on enter" },
+                { "from": "Final", "to": "Final_effect_1", "label": "on enter" }
               ]
             }
         """.trimIndent()
@@ -74,12 +78,14 @@ class GlyphicWriterTest {
               "direction": "TB",
               "states": [
                 { "id": "test_Parent", "label": "Parent", "kind": "composite" },
-                { "id": "other_Child", "label": "Child\nchildEffect﹙﹚", "parent": "test_Parent" },
+                { "id": "other_Child", "label": "Child", "parent": "test_Parent" },
+                { "id": "other_Child_effect_0", "label": "⚡ childEffect﹙﹚", "parent": "test_Parent" },
                 { "id": "test_Done", "label": "Done" }
               ],
               "transitions": [
                 { "from": "test_Parent", "to": "test_Done", "label": "ParentEvent" },
-                { "from": "other_Child", "to": "test_Parent", "label": "ChildEvent" }
+                { "from": "other_Child", "to": "test_Parent", "label": "ChildEvent" },
+                { "from": "other_Child", "to": "other_Child_effect_0", "label": "on enter" }
               ]
             }
         """.trimIndent()
@@ -99,11 +105,17 @@ class GlyphicWriterTest {
         val glyphic = GlyphicWriter.toGlyphic(graph)
 
         kotlin.test.assertTrue(glyphic.contains(""""id": "first_Child", "label": "Child" }"""))
+        kotlin.test.assertTrue(glyphic.contains(""""id": "second_Child", "label": "Child" }"""))
         kotlin.test.assertTrue(
-            glyphic.contains(""""id": "second_Child", "label": "Child\nnotify﹙﹚" }""")
+            glyphic.contains(""""id": "second_Child_effect_0", "label": "⚡ notify﹙﹚" }""")
         )
         kotlin.test.assertTrue(
             glyphic.contains(""""from": "first_Child", "to": "second_Child", "label": "Move"""")
+        )
+        kotlin.test.assertTrue(
+            glyphic.contains(
+                """"from": "second_Child", "to": "second_Child_effect_0", "label": "on enter""""
+            )
         )
     }
 

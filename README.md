@@ -16,7 +16,7 @@ In particular this state machine offers a few nice features:
 - 🏗️ Easy graph creation via DSL
 - 💽 Sealed classes as States, with Events that can carry payloads used to construct them
 - 🌊 Transitions observable via Flow
-- 📐 Exportable directly to [Glyphic](https://github.com/MS-Teja/Glyphic) diagrams
+- 📐 Exportable directly to [Mermaid](https://mermaid.js.org/) and [Glyphic](https://github.com/MS-Teja/Glyphic) diagrams
 
 
 The state machine itself is:
@@ -144,9 +144,10 @@ registered parent and child effects. Moving between siblings preserves the paren
 cancelling the exited child's effect; leaving the parent subtree cancels both. A transition to a
 new value of the same concrete state restarts the leaf effect without restarting its parents.
 
-Effects registered via `withEffects` also appear alongside their state in generated Glyphic
-diagrams (Glyphic has no note/annotation primitive for state diagrams, so the effect names are
-appended to the state's own label instead).
+Effects registered via `withEffects` also appear in generated diagrams: as a Mermaid note attached
+to their state, or, in Glyphic output, as a separate ⚡-marked node connected to their state by an
+"on enter" edge (Glyphic has no note/annotation primitive for state diagrams, so effects get their
+own node instead).
 
 ## Guidelines
 
@@ -171,12 +172,15 @@ Launch the app to jump into a choose your own adventure style dialog flow. Can y
 
 # 📊 Generate State Machine Diagrams
 
-All KSM state machines in your project can be exported as
-[Glyphic](https://github.com/MS-Teja/Glyphic) diagrams at compile time via a Kotlin IR compiler
-plugin. Glyphic takes a strict JSON document describing states and transitions and renders it to
-SVG/PNG (or React Flow JSON) without a browser — see the
-[Glyphic README](https://github.com/MS-Teja/Glyphic) for how to turn the generated `.json` files
-into images.
+All KSM state machines in your project can be exported as diagrams at compile time via a Kotlin IR
+compiler plugin. Two output formats are generated side by side:
+
+- **[Mermaid](https://mermaid.js.org/)** `stateDiagram-v2` text, which renders inline in
+  GitHub/GitLab markdown.
+- **[Glyphic](https://github.com/MS-Teja/Glyphic)** `"type": "state"` JSON, a strict schema Glyphic
+  renders to deterministic SVG/PNG/React-Flow output without a browser — see the
+  [Glyphic README](https://github.com/MS-Teja/Glyphic) for how to turn the generated `.json` files
+  into images.
 
 ## Setup
 
@@ -191,7 +195,47 @@ plugins {
 ksm { outputDir = layout.projectDirectory.dir("ksmGraphs") }
 ```
 
-That's it. Every `compileKotlin` task will automatically write `.json` files to `build/ksmGraphs/` — one per state machine found in your source, e.g.:
+That's it. Every `compileKotlin` task will automatically write both a `.mmd` (Mermaid) and a
+`.json` (Glyphic) file to `build/ksmGraphs/` per state machine found in your source.
+
+💡 Tip: If the diagram looks wrong, your code might be wrong. These diagrams are a sanity check and a great way to review state transitions visually.
+
+Hierarchical declarations are emitted as nested Mermaid compound states, and as Glyphic composite
+states (`"kind": "composite"` with child states pointing back via `"parent"`). Effects registered
+via `withEffects` show up as a Mermaid note, and as a separate ⚡-marked Glyphic node connected by
+an "on enter" edge — see the rendered comparison below.
+
+## Mermaid vs. Glyphic, rendered side by side
+
+The same adventure sample state machine
+([`sample/ksmGraphs/stateMachine_AdventureState.mmd`](sample/ksmGraphs/stateMachine_AdventureState.mmd) /
+[`.json`](sample/ksmGraphs/stateMachine_AdventureState.json)), rendered by each tool. The Mermaid
+side uses its `layout: elk` config (same engine Glyphic uses internally), so both are laid out by
+ELK for a fair comparison:
+
+<table>
+<tr><th>Mermaid (ELK layout)</th><th>Glyphic</th></tr>
+<tr>
+<td>
+
+![AdventureState diagram rendered by Mermaid with the ELK layout](docs/diagrams/adventure-state-mermaid-elk.svg)
+
+</td>
+<td>
+
+![AdventureState diagram rendered by Glyphic](docs/diagrams/adventure-state-glyphic.svg)
+
+</td>
+</tr>
+</table>
+
+Mermaid draws `withEffects` registrations as a note bubble hanging off the state (the yellow
+boxes). Glyphic has no note/annotation primitive for state diagrams, so effects instead get their
+own small node marked with ⚡, connected back to their owning state by an "on enter" edge — visually
+distinct from a real event transition rather than just another line crammed into the state's own
+label.
+
+Glyphic also renders the flat `AppStates` example from earlier in this README:
 
 ```json
 {
@@ -217,70 +261,7 @@ That's it. Every `compileKotlin` task will automatically write `.json` files to 
 }
 ```
 
-which Glyphic renders as:
-
 ![AppStates diagram rendered by Glyphic](docs/diagrams/app-states-glyphic.svg)
-
-💡 Tip: If the diagram looks wrong, your code might be wrong. These diagrams are a sanity check and a great way to review state transitions visually.
-
-Hierarchical declarations are emitted as Glyphic composite states (`"kind": "composite"` with
-child states pointing back via `"parent"`), including transitions and effect labels declared on
-parent states. See [Migrating from Mermaid](#-migrating-from-mermaid) below for a side-by-side
-comparison against the old output.
-
-## 🧜‍♀️ Migrating from Mermaid
-
-Versions prior to this release exported [Mermaid](https://mermaid.js.org/) `stateDiagram-v2` text
-instead. Mermaid renders inline in GitHub/GitLab markdown, which was convenient, but its notes
-(used for effects) and identifier grammar made hierarchical output awkward. Glyphic trades the
-inline-markdown convenience for a validated, versionable JSON document and deterministic
-SVG/PNG/React-Flow output. The same adventure sample state machine, before and after:
-
-<table>
-<tr><th>Before (Mermaid)</th><th>After (Glyphic, rendered)</th></tr>
-<tr>
-<td>
-
-```mermaid
-stateDiagram-v2
-    Start
-    DarkForest
-    OldBridge
-    CaveEntrance
-    FightMonster
-    state Finished {
-        GameOver
-        Treasure
-    }
-    Start --> DarkForest: Begin
-    DarkForest --> OldBridge: GoLeft
-    DarkForest --> CaveEntrance: GoRight
-    OldBridge --> Treasure: CrossBridge
-    OldBridge --> GameOver: RunAway
-    CaveEntrance --> FightMonster: EnterCave
-    CaveEntrance --> DarkForest: RunAway
-    FightMonster --> Treasure: Fight
-    FightMonster --> GameOver: RunAway
-    Finished --> Start: Restart
-    note right of Treasure
-        rainCoins﹙﹚
-    end note
-    note right of GameOver
-        rainSkulls﹙﹚
-    end note
-```
-
-</td>
-<td>
-
-![AdventureState diagram rendered by Glyphic](docs/diagrams/adventure-state-glyphic.svg)
-
-</td>
-</tr>
-</table>
-
-The raw Glyphic JSON for this diagram lives at
-[`sample/ksmGraphs/stateMachine_AdventureState.json`](sample/ksmGraphs/stateMachine_AdventureState.json).
 
 ---
 

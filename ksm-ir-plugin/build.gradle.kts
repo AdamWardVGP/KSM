@@ -27,7 +27,7 @@ mavenPublishing {
     coordinates(group.toString(), "ksm-ir-plugin", version.toString())
     pom {
         name = "KSM IR Plugin"
-        description = "Kotlin IR compiler plugin for KSM — generates Glyphic state diagrams at compile time"
+        description = "Kotlin IR compiler plugin for KSM — generates Mermaid and Glyphic state diagrams at compile time"
         inceptionYear = "2026"
         url = "https://github.com/AdamWardVGP/KSM"
         licenses {

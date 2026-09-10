@@ -15,15 +15,31 @@ open KsmSample.xcodeproj
 Select an iOS simulator and run the `KsmSample` scheme. The Xcode build invokes Gradle to build and
 embed the shared Kotlin framework.
 
-This diagram is generated at compile time by `ksm-ir-plugin` as a
-[Glyphic](https://github.com/MS-Teja/Glyphic) JSON document
-([`ksmGraphs/stateMachine_AdventureState.json`](ksmGraphs/stateMachine_AdventureState.json)),
-rendered here as SVG:
+This diagram is generated at compile time by `ksm-ir-plugin`, in both supported formats:
+[Mermaid](https://mermaid.js.org/) ([`ksmGraphs/stateMachine_AdventureState.mmd`](ksmGraphs/stateMachine_AdventureState.mmd))
+and [Glyphic](https://github.com/MS-Teja/Glyphic) ([`ksmGraphs/stateMachine_AdventureState.json`](ksmGraphs/stateMachine_AdventureState.json)).
+Both are rendered below using the same ELK layout engine for a fair comparison — see the root
+[README](../README.md#-generate-state-machine-diagrams) for details on how `withEffects` shows up
+differently in each:
+
+<table>
+<tr><th>Mermaid (ELK layout)</th><th>Glyphic</th></tr>
+<tr>
+<td>
+
+![AdventureState diagram rendered by Mermaid with the ELK layout](../docs/diagrams/adventure-state-mermaid-elk.svg)
+
+</td>
+<td>
 
 ![AdventureState diagram rendered by Glyphic](../docs/diagrams/adventure-state-glyphic.svg)
 
+</td>
+</tr>
+</table>
+
 <details>
-<summary>Before: what this looked like as a Mermaid diagram (pre-Glyphic)</summary>
+<summary>Raw Mermaid source</summary>
 
 ```mermaid
 stateDiagram-v2

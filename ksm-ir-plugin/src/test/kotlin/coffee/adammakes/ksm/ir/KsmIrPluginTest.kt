@@ -125,7 +125,7 @@ class KsmIrPluginTest {
 
     @OptIn(ExperimentalCompilerApi::class)
     @Test
-    fun `plugin generates glyphic output file`() {
+    fun `plugin generates both mermaid and glyphic output files`() {
         val outputDir = outputDir("flat")
         try {
             val kotlinSource = SourceFile.kotlin(
@@ -144,24 +144,32 @@ class KsmIrPluginTest {
             val result = compilation.compile()
             assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
 
-            val jsonFiles = outputDir.listFiles { _, name -> name.endsWith(".json") }
-            assertTrue(
-                jsonFiles != null && jsonFiles.isNotEmpty(),
-                "Expected at least one .json file to be generated in $outputDir"
-            )
             assertEquals(
-                listOf("stateMachine_TestState.json"),
-                jsonFiles.map { it.name }.sorted(),
+                listOf("stateMachine_TestState.json", "stateMachine_TestState.mmd"),
+                outputDir.listFiles()!!.map { it.name }.sorted(),
             )
 
-            val content = jsonFiles.first().readText()
-            assertTrue(content.contains(""""type": "state""""), "Expected Glyphic state type in output")
+            val mermaidContent = File(outputDir, "stateMachine_TestState.mmd").readText()
             assertTrue(
-                content.contains(
+                mermaidContent.contains("stateDiagram-v2"),
+                "Expected stateDiagram-v2 in Mermaid output",
+            )
+            assertTrue(
+                mermaidContent.contains("Initial --> Final: Move"),
+                "Expected transition in Mermaid output",
+            )
+
+            val glyphicContent = File(outputDir, "stateMachine_TestState.json").readText()
+            assertTrue(
+                glyphicContent.contains(""""type": "state""""),
+                "Expected Glyphic state type in output",
+            )
+            assertTrue(
+                glyphicContent.contains(
                     """"from": "coffee_adammakes_ksm_test_TestState_Initial", """ +
                         """"to": "coffee_adammakes_ksm_test_TestState_Final", "label": "Move""""
                 ),
-                "Expected transition in output",
+                "Expected transition in Glyphic output",
             )
         } finally {
             outputDir.deleteRecursively()

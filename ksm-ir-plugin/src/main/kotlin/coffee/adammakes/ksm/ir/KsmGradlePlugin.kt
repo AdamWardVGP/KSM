@@ -32,7 +32,7 @@ class KsmGradlePlugin : KotlinCompilerPluginSupportPlugin {
             project.logger.warn(
                 "[KSM] ksm-ir-plugin was compiled against Kotlin $SUPPORTED_KOTLIN_MINOR.x " +
                     "but this project uses Kotlin $kotlinVersion. " +
-                    "Glyphic diagram generation will be skipped. " +
+                    "Mermaid/Glyphic diagram generation will be skipped. " +
                     "See https://github.com/AdamWardVGP/KSM for a compatible plugin version."
             )
         }
