@@ -7,10 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-10-22
+
 ### Added
 - Kotlin 2.4.x support for IR Mermaid diagram generation, including guarded transitions whose
   declared target is a base state.
 - Support for iOS.
+
+### Changed
+- **Breaking:** Built with Kotlin 2.4.20. The IR diagram plugin now requires Kotlin 2.4.x
+  instead of Kotlin 2.2.x; upgrade the consuming project's Kotlin Gradle plugin accordingly.
 
 ## [1.0.0] - 2026-07-24
 
