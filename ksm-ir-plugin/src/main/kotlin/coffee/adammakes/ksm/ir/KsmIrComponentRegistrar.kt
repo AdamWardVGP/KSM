@@ -6,15 +6,19 @@ import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.CommonConfigurationKeys
 import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.config.MessageCollectorAccess
 
 var logger: MessageCollector? = null
 
-@OptIn(ExperimentalCompilerApi::class)
+@OptIn(ExperimentalCompilerApi::class, MessageCollectorAccess::class)
 /**
  * Step 1:
  * Register our plugin with the compiler.
  */
 class KsmIrComponentRegistrar : CompilerPluginRegistrar() {
+
+    override val pluginId: String
+        get() = "coffee.adammakes.ksm.ir"
 
     override val supportsK2: Boolean
         get() = true
