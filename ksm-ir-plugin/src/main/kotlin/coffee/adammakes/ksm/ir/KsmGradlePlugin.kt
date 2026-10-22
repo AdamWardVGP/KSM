@@ -11,7 +11,7 @@ import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 import org.jetbrains.kotlin.gradle.plugin.SubpluginArtifact
 import org.jetbrains.kotlin.gradle.plugin.SubpluginOption
 
-private const val SUPPORTED_KOTLIN_MINOR = "2.2"
+private const val SUPPORTED_KOTLIN_MINOR = "2.4"
 
 @OptIn(ExperimentalCompilerApi::class)
 class KsmGradlePlugin : KotlinCompilerPluginSupportPlugin {

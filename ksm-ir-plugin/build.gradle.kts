@@ -2,7 +2,7 @@ import com.vanniktech.maven.publish.SonatypeHost
 import java.util.Properties
 
 plugins {
-    kotlin("jvm") version "2.3.0" // version required here; composite build can't use catalog for plugin versions
+    kotlin("jvm") version "2.4.20" // version required here; composite build can't use catalog for plugin versions
     `java-gradle-plugin`
     id("com.vanniktech.maven.publish") version "0.30.0"
 }
@@ -92,7 +92,7 @@ tasks.withType<JavaCompile>().configureEach {
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
-        apiVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0)
-        languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0)
+        apiVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_4)
+        languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_4)
     }
 }

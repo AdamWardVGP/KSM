@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Kotlin 2.4.x support for IR Mermaid diagram generation, including guarded transitions whose
+  declared target is a base state.
 - Support for iOS.
 
 ## [1.0.0] - 2026-07-24

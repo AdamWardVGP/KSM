@@ -186,6 +186,10 @@ ksm { outputDir = layout.projectDirectory.dir("ksmGraphs") }
 
 That's it. Every `compileKotlin` task will automatically write `.mmd` files to `build/ksmGraphs/` — one per state machine found in your source.
 
+This release is built and tested with Kotlin 2.4.20. The IR diagram plugin supports Kotlin 2.4.x
+JVM and Android compilations; compilations using a different known Kotlin version are skipped with
+a warning. The core state-machine library does not require the IR plugin.
+
 ```mermaid
 stateDiagram-v2
     Uninitialized --> RequestEula: EulaOutOfDate

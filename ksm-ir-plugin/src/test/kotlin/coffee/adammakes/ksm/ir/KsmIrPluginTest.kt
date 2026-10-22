@@ -91,6 +91,42 @@ class KsmIrPluginTest {
             }
         """
 
+        private const val guardedTransitionSource = """
+            package coffee.adammakes.ksm.test
+
+            import coffee.adammakes.ksm.stateMachine
+            import kotlinx.coroutines.GlobalScope
+
+            sealed interface TestState
+            data object Idle : TestState
+            data class GestureAudition(val token: String) : TestState
+            data object ScalarAudition : TestState
+
+            sealed interface TestEvent {
+                data class GestureCompleted(val token: String) : TestEvent
+                data class GestureCancelled(val token: String) : TestEvent
+                data object StartGesture : TestEvent
+            }
+
+            val fsm = stateMachine<TestState, TestEvent> {
+                initialState = Idle
+                dispatchedOn = GlobalScope
+
+                state<Idle> {
+                    on<TestEvent.StartGesture>() transitionTo GestureAudition("active")
+                }
+                state<GestureAudition> {
+                    on<TestEvent.GestureCompleted>().transitionWith<TestState> { state, event ->
+                        if (state.token == event.token) Idle else state
+                    }
+                    on<TestEvent.GestureCancelled>().transitionWith<TestState> { state, event ->
+                        if (state.token == event.token) Idle else state
+                    }
+                }
+                state<ScalarAudition> {}
+            }
+        """
+
         private fun outputDir(name: String): File =
             File("build/test-output/$name").absoluteFile.apply {
                 deleteRecursively()
@@ -204,6 +240,52 @@ class KsmIrPluginTest {
                 content.contains("Parent --> Parent: Reset"),
                 "Expected parent attribution after nested declaration, got:\n$content",
             )
+        } finally {
+            outputDir.deleteRecursively()
+        }
+    }
+
+    @OptIn(ExperimentalCompilerApi::class)
+    @Test
+    fun `guarded base-state transitions generate graph edges`() {
+        val outputDir = outputDir("guarded-transition")
+        try {
+            val kotlinSource =
+                SourceFile.kotlin("GuardedStateMachine.kt", guardedTransitionSource.trimIndent())
+            val compilation = compilation("guarded-transition").apply {
+                sources = listOf(kotlinSource)
+                compilerPluginRegistrars = listOf(KsmIrComponentRegistrar())
+                commandLineProcessors = listOf(KsmCommandLineProcessor())
+                pluginOptions =
+                    listOf(
+                        PluginOption(
+                            "coffee.adammakes.ksm.ir",
+                            "outputDir",
+                            outputDir.absolutePath,
+                        )
+                    )
+            }
+
+            val result = compilation.compile()
+            assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+
+            val mmdFiles = outputDir.listFiles { _, name -> name.endsWith(".mmd") }
+            assertTrue(mmdFiles != null && mmdFiles.isNotEmpty())
+            assertEquals(
+                listOf("stateMachine_TestState.mmd"),
+                mmdFiles.map { it.name }.sorted(),
+            )
+            val content = mmdFiles.first().readText()
+            assertTrue(content.contains("Idle --> GestureAudition: StartGesture"), content)
+            assertTrue(
+                content.contains("GestureAudition --> TestState: GestureCompleted"),
+                content,
+            )
+            assertTrue(
+                content.contains("GestureAudition --> TestState: GestureCancelled"),
+                content,
+            )
+            assertTrue(content.contains("stateDiagram-v2"), content)
         } finally {
             outputDir.deleteRecursively()
         }
