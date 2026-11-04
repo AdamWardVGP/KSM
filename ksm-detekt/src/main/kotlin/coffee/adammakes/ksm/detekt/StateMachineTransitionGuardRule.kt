@@ -22,26 +22,32 @@ import org.jetbrains.kotlin.psi.KtWhenExpression
 /**
  * Rejects `if` and `when` in direct KSM transition actions.
  *
- * This is the problem: the action decides whether an event applies, hiding eligibility inside a
- * reducer instead of declaring it in the state graph.
+ * This is the problem: the same declared source-state/event pair chooses between multiple target
+ * state types inside a reducer, hiding those edges from the state graph. This is not limited to
+ * guards that return the original state.
  *
  * ```kotlin
  * state<Connection> {
  *   on<RetryRequested>() transitionWith { state, _ ->
  *     when (state) {
- *       is Offline -> Connecting
+ *       is OfflineWithCredentials -> Connecting
+ *       is OfflineWithoutCredentials -> AwaitingCredentials
  *       else -> state
  *     }
  *   }
  * }
  * ```
  *
- * This is the preferred way: declare the edge only for the state where the event applies. KSM
- * ignores events with no applicable edge.
+ * This is the preferred way: split the source states and declare a separate transition for each.
+ * Each source-state/event pair has one target state type. KSM ignores events with no applicable
+ * edge.
  *
  * ```kotlin
- * state<Offline> {
+ * state<OfflineWithCredentials> {
  *   on<RetryRequested>() transitionTo Connecting
+ * }
+ * state<OfflineWithoutCredentials> {
+ *   on<RetryRequested>() transitionTo AwaitingCredentials
  * }
  * ```
  *

@@ -58,29 +58,39 @@ These are architecture preferences, not claims that every reported program is in
 
 A transition action should construct the destination state for its declared edge.
 An `if` or `when` inside the action can instead decide whether the event applies or
-which edge to take, hiding that decision from the state graph:
+which edge to take, hiding that decision from the state graph. In this example,
+the same declared `Connection`/`RetryRequested` pair chooses between different target
+state types:
 
 ```kotlin
 state<Connection> {
     on<RetryRequested>() transitionWith { state, _ ->
         when (state) {
-            is Offline -> Connecting
+            is OfflineWithCredentials -> Connecting
+            is OfflineWithoutCredentials -> AwaitingCredentials
             else -> state
         }
     }
 }
 ```
 
-The equivalent `if (state is Offline) Connecting else state` is also reported.
+Both target-selecting branches are part of the problem, not just `else -> state`.
+The rule reports the `when` regardless of its number of branches, even if every branch
+returns a new state. Equivalent `if`/`else` target selection is also reported.
 
 ### This is the preferred way
 
-Declare the edge only for states where the event applies. KSM ignores an event when
+Split the source states and declare a separate transition for each: **one source-state/event
+pair has one target state type**. If the distinction currently exists only as a condition
+on state data, represent it as distinct source states instead. KSM ignores an event when
 there is no applicable edge:
 
 ```kotlin
-state<Offline> {
+state<OfflineWithCredentials> {
     on<RetryRequested>() transitionTo Connecting
+}
+state<OfflineWithoutCredentials> {
+    on<RetryRequested>() transitionTo AwaitingCredentials
 }
 ```
 
