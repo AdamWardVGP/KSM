@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Optional JVM-only `ksm-detekt` plugin for Detekt 2.0.0-alpha.6 with configurable
+  `KSM` architecture rules for conditional transition actions (`if` and `when`),
+  state-guarded event dispatch, and direct state-entry observers. Rules resolve KSM APIs
+  rather than matching names, and the plugin adds no application runtime dependencies.
+
 ## [2.0.0] - 2026-10-22
 
 ### Added

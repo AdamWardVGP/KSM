@@ -22,8 +22,8 @@ This project follows [Semantic Versioning](https://semver.org/).
    git push origin refs/tags/v2.0.0
    ```
 
-CI will pick up the `v*` tag, sign the artifacts, and publish `ksm`, `ksm-effects`, and
-`ksm-ir-plugin` to Maven Central. The release runs on macOS so the iOS device and simulator
+CI will pick up the `v*` tag, sign the artifacts, and publish `ksm`, `ksm-effects`, `ksm-detekt`,
+and `ksm-ir-plugin` to Maven Central. The release runs on macOS so the iOS device and simulator
 artifacts are published alongside the JVM artifacts.
 
 7. Confirm the Release workflow succeeds, then create a GitHub release for the existing tag
@@ -34,3 +34,10 @@ artifacts are published alongside the JVM artifacts.
 - Pre-release versions use suffixes like `0.0.1-alpha`, `0.1.0-beta.1`.
 - Signing is skipped locally when `ORG_GRADLE_PROJECT_signingInMemoryKey` is unset.
 - The IR plugin must be at the same version as the core library — both are published together by CI.
+- `ksm-detekt` also inherits `VERSION_NAME`, but is a JVM-only build-time artifact for
+  Detekt **2.0.0-alpha.6**, not the repository's own Detekt 1.23.8 runner. Do not attach it
+  to that runner or add it as an application runtime dependency.
+- `ksm-detekt` is new in `[Unreleased]`; the existing `v2.0.0` tag does not include it.
+  Publish it with the next authorized release and verify its Maven Central coordinate before
+  migrating consumers. Do not reuse an existing release tag or assume a local build is available
+  remotely.

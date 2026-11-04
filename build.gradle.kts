@@ -5,6 +5,7 @@ plugins {
   alias(libs.plugins.composeMultiplatform) apply false
   alias(libs.plugins.composeCompiler) apply false
   alias(libs.plugins.kotlinMultiplatform) apply false
+  alias(libs.plugins.kotlinJvm) apply false
   alias(libs.plugins.detekt)
   alias(libs.plugins.spotless)
 }
@@ -36,11 +37,22 @@ detekt {
 
 spotless {
   kotlin {
-    target("ksm/src/**/*.kt", "ksm-effects/src/**/*.kt", "sample/src/**/*.kt")
+    target(
+      "ksm/src/**/*.kt",
+      "ksm-effects/src/**/*.kt",
+      "ksm-detekt/src/**/*.kt",
+      "sample/src/**/*.kt",
+    )
     ktfmt(libs.versions.ktfmt.get()).googleStyle()
   }
   kotlinGradle {
-    target("*.gradle.kts", "ksm/*.gradle.kts", "ksm-effects/*.gradle.kts", "sample/*.gradle.kts")
+    target(
+      "*.gradle.kts",
+      "ksm/*.gradle.kts",
+      "ksm-effects/*.gradle.kts",
+      "ksm-detekt/*.gradle.kts",
+      "sample/*.gradle.kts",
+    )
     ktfmt(libs.versions.ktfmt.get()).googleStyle()
   }
 }

@@ -21,6 +21,8 @@ jobs:
         run: ./gradlew :ksm:jvmTest
       - name: Run KSM Effects tests
         run: ./gradlew :ksm-effects:jvmTest
+      - name: Run KSM Detekt tests and check publication
+        run: ./gradlew :ksm-detekt:check :ksm-detekt:checkPomFileForMavenPublication
       - name: Publish KSM to local Maven
         run: ./gradlew :ksm:publishToMavenLocal
       - name: Publish IR plugin to local Maven
