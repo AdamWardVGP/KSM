@@ -40,9 +40,16 @@ mavenPublishing {
             developer {
                 id = "AdamWardVGP"
                 name = "Adam Ward"
+                email = "AdamWardVGP@gmail.com"
+                organization = "KSM"
+                organizationUrl = "https://github.com/AdamWardVGP/KSM"
             }
         }
-        scm { url = "https://github.com/AdamWardVGP/KSM" }
+        scm {
+            url = "https://github.com/AdamWardVGP/KSM"
+            connection = "scm:git:https://github.com/AdamWardVGP/KSM.git"
+            developerConnection = "scm:git:ssh://git@github.com/AdamWardVGP/KSM.git"
+        }
     }
 }
 
