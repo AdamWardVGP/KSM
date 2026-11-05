@@ -37,7 +37,3 @@ artifacts are published alongside the JVM artifacts.
 - `ksm-detekt` also inherits `VERSION_NAME`, but is a JVM-only build-time artifact for
   Detekt **2.0.0-alpha.6**, not the repository's own Detekt 1.23.8 runner. Do not attach it
   to that runner or add it as an application runtime dependency.
-- `ksm-detekt` is new in `[Unreleased]`; the existing `v2.0.0` tag does not include it.
-  Publish it with the next authorized release and verify its Maven Central coordinate before
-  migrating consumers. Do not reuse an existing release tag or assume a local build is available
-  remotely.

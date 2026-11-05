@@ -146,13 +146,12 @@ new value of the same concrete state restarts the leaf effect without restarting
 
 Effects registered via `withEffects` also appear as notes in generated Mermaid diagrams.
 
-## 5. Check state-machine architecture (optional, unreleased)
+## 5. Check state-machine architecture (optional)
 
 The JVM-only [`ksm-detekt`](ksm-detekt/README.md) plugin provides opt-in **Detekt
 2.0.0-alpha.6** rules for `if`/`when` inside transition actions, state-guarded event dispatch,
 and direct state-entry observers. It is a build-time plugin, not a runtime dependency.
 The guide explains each problem with an example and shows the preferred approach.
-This new artifact requires a future release; it is not included in the existing `2.0.0` release.
 
 ## Guidelines
 

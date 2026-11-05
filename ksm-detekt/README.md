@@ -6,18 +6,15 @@ runtime behavior when these rules are enabled.
 
 ## Installation and compatibility
 
-**Unreleased:** the artifact is `coffee.adammakes.ksm:ksm-detekt:<version>`, with its
-version inherited from the root `VERSION_NAME`. The existing KSM `2.0.0` release predates
-this module. Wait for an authorized release containing it and verify availability on Maven
-Central before replacing local rules.
+The artifact is `coffee.adammakes.ksm:ksm-detekt`, with its version inherited from the
+root `VERSION_NAME`.
 
 The plugin targets **Detekt 2.0.0-alpha.6** (`dev.detekt` API) and **JDK 17+**.
 It is not compatible with Detekt 1.x; the repository's own Detekt 1.23.8 lint setup remains
 unchanged. Other Detekt 2 alpha versions are not guaranteed binary-compatible, particularly
 for Kotlin Analysis API rules.
 
-After the artifact is published, add it to the consumer's Detekt plugin classpath, **not**
-`implementation`:
+Add it to the consumer's Detekt plugin classpath, **not** `implementation`:
 
 ```kotlin
 plugins {
@@ -25,7 +22,7 @@ plugins {
 }
 
 dependencies {
-    detektPlugins("coffee.adammakes.ksm:ksm-detekt:<published-version>")
+    detektPlugins("coffee.adammakes.ksm:ksm-detekt:2.1.0")
 }
 ```
 
@@ -201,6 +198,5 @@ observers. It does not inspect `collect`, aliases, or arbitrary Flow chains.
 
 The module uses the same Maven Central publication and optional signing conventions as
 KSM's other modules. It publishes one JVM jar plus sources and documentation artifacts;
-there are no application runtime dependencies in its POM. Release CI includes the module,
-but building or merging this change does not publish it. See [RELEASING.md](../RELEASING.md)
-for the separately authorized release procedure.
+there are no application runtime dependencies in its POM. Release CI includes the module.
+See [RELEASING.md](../RELEASING.md) for the release procedure.
