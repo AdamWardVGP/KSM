@@ -1,0 +1,8 @@
+KSM:
+  active: false
+  StateMachineTransitionGuard:
+    active: false
+  StateMachineEventDispatchGuard:
+    active: false
+  StateMachineStateObserver:
+    active: false

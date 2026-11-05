@@ -1,6 +1,7 @@
 [versions]
 agp = "8.11.2"
 detekt = "1.23.8"
+detekt-rules = "2.0.0-alpha.6"
 ktfmt = "0.53"
 spotless = "7.0.2"
 android-compileSdk = "36"
@@ -22,6 +23,8 @@ kotlinx-serialization = "1.8.1"
 turbine = "1.2.1"
 
 [libraries]
+detekt-api = { module = "dev.detekt:detekt-api", version.ref = "detekt-rules" }
+detekt-test = { module = "dev.detekt:detekt-test", version.ref = "detekt-rules" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-testJunit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 junit = { module = "junit:junit", version.ref = "junit" }
@@ -53,4 +56,5 @@ composeHotReload = { id = "org.jetbrains.compose.hot-reload", version.ref = "com
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

@@ -37,4 +37,6 @@ include(":ksm")
 
 include(":ksm-effects")
 
+include(":ksm-detekt")
+
 include(":sample")
